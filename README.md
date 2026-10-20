@@ -1,7 +1,8 @@
 # 📱 Android to iOS Before New Year (10-Week Engineering Journey)
 
 **Author:** [Sudhakar Raju (@sudhakar-r08)](https://github.com/sudhakar-r08)  
-**Repository:** [github.com/sudhakar-r08/ios-for-android-devs](https://github.com/sudhakar-r08/ios-for-android-devs)
+**Repository:** [github.com/sudhakar-r08/ios-for-android-devs](https://github.com/sudhakar-r08/ios-for-android-devs)  
+**Interactive Tutorial Website:** `https://sudhakar-r08.github.io/ios-for-android-devs/` (Located in [`/docs`](./docs/index.html) — Ready for **GitHub Pages** & **Firebase Hosting**)
 
 Welcome! This repository documents a structured, deep-dive transition from **Android Development (Kotlin / Jetpack Compose)** to **Modern iOS Development (Swift 6 / SwiftUI)** between **October 20 and December 31**.
 
@@ -50,3 +51,29 @@ Every week follows a repeatable 4-step loop:
 2. **Code Lab**: Write runnable Swift / SwiftUI code in that week's directory and verify edge cases.
 3. **Deep-Dive Notes (`notes.md`)**: Document architectural trade-offs, interview-level details, and common traps for Android developers.
 4. **Educational LinkedIn Article (`linkedin-article.md`)**: Distill the week's insights into a clear, technically rigorous article with side-by-side code snippets and diagrams.
+
+---
+
+## 🌐 Hosting the Interactive Tutorial Website
+
+The [`/docs`](./docs) directory contains a complete, interactive 10-Week **Android-to-iOS Engineering Academy** web application (with side-by-side Kotlin vs. Swift code comparisons, a live **ARC Retain Cycle Simulator**, interactive coding challenges, quizzes, and LinkedIn article kits).
+
+### Option A: Host on GitHub Pages (Free & Automatic)
+1. Go to **[Repository Settings → Pages](https://github.com/sudhakar-r08/ios-for-android-devs/settings/pages)**.
+2. Under **Build and deployment → Source**, choose either:
+   - **GitHub Actions** *(uses the included [`.github/workflows/deploy-pages.yml`](./.github/workflows/deploy-pages.yml))*, **OR**
+   - **Deploy from a branch** → Select branch `main` and folder `/docs` → Click **Save**.
+3. Your live website will be published at:  
+   **`https://sudhakar-r08.github.io/ios-for-android-devs/`**
+
+### Option B: Host on Firebase Hosting
+This repository includes a pre-configured [`firebase.json`](./firebase.json) pointing `"public": "docs"`.
+```bash
+# 1. Preview locally with Firebase Emulator
+npx -y firebase-tools@latest emulators:start --only hosting
+
+# 2. Deploy to Firebase Hosting
+npx -y firebase-tools@latest login
+npx -y firebase-tools@latest use --add
+npx -y firebase-tools@latest deploy --only hosting
+```
