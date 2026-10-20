@@ -1,5 +1,8 @@
 # 📱 Android to iOS Before New Year (10-Week Engineering Journey)
 
+**Author:** [Sudhakar Raju (@sudhakar-r08)](https://github.com/sudhakar-r08)  
+**Repository:** [github.com/sudhakar-r08/ios-for-android-devs](https://github.com/sudhakar-r08/ios-for-android-devs)
+
 Welcome! This repository documents a structured, deep-dive transition from **Android Development (Kotlin / Jetpack Compose)** to **Modern iOS Development (Swift 6 / SwiftUI)** between **October 20 and December 31**.
 
 Each week pairs **hands-on engineering notes & code** with a **thorough educational LinkedIn article** written to help fellow Android and mobile engineers understand iOS through mental models they already know.

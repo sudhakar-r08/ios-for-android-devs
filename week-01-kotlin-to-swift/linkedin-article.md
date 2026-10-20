@@ -40,7 +40,8 @@ Swift formalizes this into a compiler-enforced control flow construct:
 `guard let user = repo.getUser() else { return }`
 If you forget to exit the scope inside `else`, the Swift compiler won’t even let your code build.
 
-📖 I’ve published the full Week 1 technical breakdown + runnable Swift vs. Kotlin code labs on GitHub (link in the first comment 👇).
+📖 I’ve published the full Week 1 technical breakdown + runnable Swift vs. Kotlin code labs on GitHub:
+🔗 https://github.com/sudhakar-r08/ios-for-android-devs/tree/main/week-01-kotlin-to-swift
 
 Fellow mobile devs: If you’ve worked across both Android and iOS, what was the #1 thing that tripped you up first?
 
@@ -202,3 +203,5 @@ enum UiState<T> {
 - **Use `enum` with associated values** wherever you would reach for a `sealed interface` in Kotlin.
 
 **Next Week (Week 2):** We’ll dive into **Protocol-Oriented Programming (`protocol` vs Kotlin `interface`), Associated Types vs Generics, and Swift's Typed Error Handling (`throws`)**.
+
+📂 **Full Notes & Runnable Swift Code Lab on GitHub:** [https://github.com/sudhakar-r08/ios-for-android-devs](https://github.com/sudhakar-r08/ios-for-android-devs)
