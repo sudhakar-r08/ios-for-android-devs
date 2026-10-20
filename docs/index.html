@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -34,9 +34,11 @@
         🗺️ Rosetta Stone
       </button>
 
-      <button class="btn" onclick="toggleTheme()" title="Switch Dark / Light Theme">
-        🌗 Theme
-      </button>
+      <select id="theme-selector" class="theme-select" onchange="setTheme(this.value)" aria-label="Select Color Theme">
+        <option value="light">☀️ Cupertino Light</option>
+        <option value="sepia">📖 Warm Paper</option>
+        <option value="dark">🌙 Midnight Zinc</option>
+      </select>
 
       <a
         href="https://github.com/sudhakar-r08/ios-for-android-devs"

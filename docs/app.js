@@ -1274,17 +1274,17 @@ function renderMainContent() {
 }
 
 // Theme Switcher
-window.toggleTheme = function() {
-  const current = document.documentElement.getAttribute("data-theme");
-  const next = current === "light" ? "dark" : "light";
-  document.documentElement.setAttribute("data-theme", next);
-  localStorage.setItem("ios_tutorial_theme", next);
+window.setTheme = function(themeName) {
+  document.documentElement.setAttribute("data-theme", themeName);
+  localStorage.setItem("ios_tutorial_theme_v2", themeName);
+  const sel = document.getElementById("theme-selector");
+  if (sel && sel.value !== themeName) sel.value = themeName;
 };
 
 // Initialize App
 document.addEventListener("DOMContentLoaded", () => {
-  const savedTheme = localStorage.getItem("ios_tutorial_theme") || "dark";
-  document.documentElement.setAttribute("data-theme", savedTheme);
+  const savedTheme = localStorage.getItem("ios_tutorial_theme_v2") || "light";
+  window.setTheme(savedTheme);
   updateProgressUI();
   renderSidebar();
   renderMainContent();
