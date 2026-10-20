@@ -271,7 +271,7 @@ Swift's \`Codable\` protocol (\`Encodable & Decodable\`) is built directly into 
 
 ## 2. Why iOS Doesn't Need Bytecode-Weaving DI
 
-Why do we need Hilt on Android? Because the Android OS instantiates \`Activity\` and \`Service\` classes on our behalf, forcing us to inject dependencies after construction. In SwiftUI, we own the `@main App` struct and construct every View and ViewModel ourselves—making pure constructor injection effortless.`
+Why do we need Hilt on Android? Because the Android OS instantiates \`Activity\` and \`Service\` classes on our behalf, forcing us to inject dependencies after construction. In SwiftUI, we own the \`@main App\` struct and construct every View and ViewModel ourselves—making pure constructor injection effortless.`
   },
 
   // ==========================================================================

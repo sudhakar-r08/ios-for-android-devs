@@ -169,6 +169,10 @@ function escapeHtml(str) {
     .replace(/>/g, "&gt;");
 }
 
+function formatInlineCode(str) {
+  return String(str || "").replace(/`([^`]+)`/g, "<code>$1</code>");
+}
+
 function getWeekQuizScore(weekNum) {
   const weekObj = WEEKS_DATA.find(w => w.week === weekNum);
   if (!weekObj) return { correct: 0, answered: 0, total: 0 };
@@ -271,7 +275,7 @@ function renderFlashcardsSection(weekObj) {
       <div class="flashcard-container" onclick="flipFlashcard()" role="button" tabindex="0">
         <div>
           <div class="flashcard-badge">${flashcardFlipped ? "💡 Answer (Click to flip back)" : "❓ Question (Click card to reveal answer)"}</div>
-          <div class="flashcard-text">${flashcardFlipped ? card.back : card.front}</div>
+          <div class="flashcard-text">${formatInlineCode(flashcardFlipped ? card.back : card.front)}</div>
         </div>
         <div style="font-size:0.78rem;color:var(--text-muted);margin-top:1rem;">
           Tap anywhere on this card to flip
@@ -488,7 +492,7 @@ ${modifierPaddingFirst
       <div class="interactive-widget">
         <div>
           <h2>🧵 Interactive Swift 6 Concurrency & Actor Isolation Visualizer</h2>
-          <p style="font-size:0.88rem;color:var(--text-secondary);">Compare how Swift 6 handles concurrent calls to an <code>actor</code> vs a `@MainActor` ViewModel.</p>
+          <p style="font-size:0.88rem;color:var(--text-secondary);">Compare how Swift 6 handles concurrent calls to an <code>actor</code> vs a <code>@MainActor</code> ViewModel.</p>
         </div>
         <div class="widget-stage" style="font-family:var(--font-mono);font-size:0.83rem;line-height:1.7;">
           <div><strong>[Task 1 - Background]</strong> calls <code>await tokenCache.save("jwt_1")</code> ──▶ Enters <strong>actor TokenCache Serial Mailbox</strong> (Safe!)</div>
@@ -698,16 +702,16 @@ function renderMainContent() {
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;">
         <div>
           <span class="pill pill-swift">Week ${weekObj.week} of 10 · ${weekObj.dates}</span>
-          <h1 style="margin-top:0.55rem;">${weekObj.title}</h1>
-          <p>${weekObj.subtitle}</p>
+          <h1 style="margin-top:0.55rem;">${formatInlineCode(weekObj.title)}</h1>
+          <p>${formatInlineCode(weekObj.subtitle)}</p>
         </div>
         <button class="btn ${isCompleted ? "" : "btn-primary"}" onclick="toggleWeekComplete(${weekObj.week})">
           ${isCompleted ? "✅ Completed (Click to Undo)" : "Mark Week " + weekObj.week + " Complete"}
         </button>
       </div>
       <div class="hero-meta-row">
-        <span class="pill pill-kotlin">Android: ${weekObj.androidAnchor}</span>
-        <span class="pill pill-swift">iOS: ${weekObj.iosAnchor}</span>
+        <span class="pill pill-kotlin">Android: ${formatInlineCode(weekObj.androidAnchor)}</span>
+        <span class="pill pill-swift">iOS: ${formatInlineCode(weekObj.iosAnchor)}</span>
       </div>
     </div>
   `;
@@ -719,13 +723,13 @@ function renderMainContent() {
 
     bodyHtml += weekObj.concepts.map(c => `
       <div class="section-card">
-        <h2>${c.heading}</h2>
+        <h2>${formatInlineCode(c.heading)}</h2>
         <div class="mental-shift-banner">
-          <strong>💡 Key Mental Shift:</strong> ${c.shift}
+          <strong>💡 Key Mental Shift:</strong> ${formatInlineCode(c.shift)}
         </div>
         ${c.details && c.details.length ? `
           <ul class="concept-details-list">
-            ${c.details.map(d => `<li>${d}</li>`).join("")}
+            ${c.details.map(d => `<li>${formatInlineCode(d)}</li>`).join("")}
           </ul>
         ` : ""}
         <div class="code-comparison">
@@ -765,7 +769,7 @@ function renderMainContent() {
       const hasAnswered = selectedIdx !== undefined;
       return `
         <div id="quiz-q-${qIdx}" style="margin-bottom:1.6rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border-subtle);">
-          <p style="font-weight:600;margin-bottom:0.65rem;">${q.question}</p>
+          <p style="font-weight:600;margin-bottom:0.65rem;">${formatInlineCode(q.question)}</p>
           ${q.options.map((opt, oIdx) => {
             let cls = "quiz-option";
             if (hasAnswered) {
@@ -774,12 +778,12 @@ function renderMainContent() {
             }
             return `
               <button class="${cls}" onclick="answerQuiz(${weekObj.week}, ${qIdx}, ${oIdx})">
-                ${opt}
+                ${formatInlineCode(opt)}
               </button>
             `;
           }).join("")}
           <div id="quiz-fb-${qIdx}" class="feedback-box ${hasAnswered ? "visible" : ""}" style="background:var(--bg-surface-elevated);border-left:4px solid ${selectedIdx === q.correctIndex ? "var(--accent-green)" : "var(--accent-danger)"};">
-            <strong>${selectedIdx === q.correctIndex ? "✅ Correct!" : "❌ Explanation:"}</strong> ${q.explanation}
+            <strong>${selectedIdx === q.correctIndex ? "✅ Correct!" : "❌ Explanation:"}</strong> ${formatInlineCode(q.explanation)}
           </div>
         </div>
       `;
