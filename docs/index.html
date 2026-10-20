@@ -23,6 +23,10 @@
     </a>
 
     <div class="topbar-actions">
+      <div id="xp-badge" class="xp-pill" title="Earn XP by answering quiz questions and completing Swift labs!">
+        ⚡ <span id="xp-count">0</span> XP
+      </div>
+
       <div class="progress-pill" title="Your 10-Week Learning Progress (Saved in Browser)">
         <span id="progress-text">0/10 Weeks (0%)</span>
         <div class="progress-bar-mini">
@@ -35,9 +39,9 @@
       </button>
 
       <select id="theme-selector" class="theme-select" onchange="setTheme(this.value)" aria-label="Select Color Theme">
-        <option value="light">☀️ Cupertino Light</option>
+        <option value="aurora">✨ Aurora Vibrant</option>
         <option value="sepia">📖 Warm Paper</option>
-        <option value="dark">🌙 Midnight Zinc</option>
+        <option value="dark">🌙 Midnight Cosmos</option>
       </select>
 
       <a

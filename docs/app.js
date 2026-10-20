@@ -148,9 +148,34 @@ function toggleWeekComplete(weekNum) {
     completedWeeks = completedWeeks.filter(w => w !== weekNum);
   } else {
     completedWeeks.push(weekNum);
+    launchConfetti();
   }
   saveCompletedWeeks();
   renderMainContent();
+}
+
+function calculateTotalXP() {
+  let xp = completedWeeks.length * 100;
+  WEEKS_DATA.forEach(w => {
+    const score = getWeekQuizScore(w.week);
+    xp += score.correct * 15;
+  });
+  return xp;
+}
+
+function launchConfetti() {
+  if (typeof document === "undefined" || !document.body || !document.createElement) return;
+  const colors = ["#4f46e5", "#ea580c", "#10b981", "#f59e0b", "#ec4899", "#06b6d4"];
+  for (let i = 0; i < 32; i++) {
+    const el = document.createElement("div");
+    el.className = "confetti-piece";
+    el.style.left = Math.random() * 100 + "vw";
+    el.style.backgroundColor = colors[i % colors.length];
+    el.style.animationDuration = (1.1 + Math.random() * 1.1) + "s";
+    el.style.animationDelay = (Math.random() * 0.25) + "s";
+    document.body.appendChild(el);
+    setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 2400);
+  }
 }
 
 function updateProgressUI() {
@@ -158,8 +183,10 @@ function updateProgressUI() {
   const pct = Math.round((completedWeeks.length / totalWeeks) * 100);
   const textEl = document.getElementById("progress-text");
   const fillEl = document.getElementById("progress-fill");
+  const xpEl = document.getElementById("xp-count");
   if (textEl) textEl.textContent = `${completedWeeks.length}/${totalWeeks} Weeks (${pct}%)`;
   if (fillEl) fillEl.style.width = `${Math.max(pct, 6)}%`;
+  if (xpEl) xpEl.textContent = calculateTotalXP();
 }
 
 function escapeHtml(str) {
@@ -167,6 +194,20 @@ function escapeHtml(str) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
+}
+
+function highlightCode(raw) {
+  const escaped = escapeHtml(raw);
+  const tokenRegex = /(\/\/.*$)|(".*?")|(#[A-Za-z_]+|@[A-Za-z_]+)|\b(struct|class|enum|protocol|extension|func|fun|val|var|let|guard|else|return|switch|case|default|where|if|try|throws|async|await|actor|some|any|weak|unowned|mutating|private|public|final|import|init|deinit|data|object|sealed|interface|suspend)\b|\b(String|Int|Double|Bool|UUID|Date|Data|URL|View|Scene|App|Optional|Result|List|VStack|HStack|ZStack|NavigationStack|Text|Button|TextField|Spacer|Codable|Decodable|Encodable|Identifiable|Hashable|Equatable|Sendable)\b/gm;
+
+  return escaped.replace(tokenRegex, (match, cmt, str, attr, kw, type) => {
+    if (cmt) return `<span class="tok-cmt">${cmt}</span>`;
+    if (str) return `<span class="tok-str">${str}</span>`;
+    if (attr) return `<span class="tok-attr">${attr}</span>`;
+    if (kw) return `<span class="tok-kw">${kw}</span>`;
+    if (type) return `<span class="tok-type">${type}</span>`;
+    return match;
+  });
 }
 
 function formatInlineCode(str) {
@@ -272,13 +313,13 @@ function renderFlashcardsSection(weekObj) {
         </div>
       </div>
 
-      <div class="flashcard-container" onclick="flipFlashcard()" role="button" tabindex="0">
+      <div class="flashcard-container ${flashcardFlipped ? "flipped" : ""}" onclick="flipFlashcard()" role="button" tabindex="0">
         <div>
-          <div class="flashcard-badge">${flashcardFlipped ? "💡 Answer (Click to flip back)" : "❓ Question (Click card to reveal answer)"}</div>
+          <div class="flashcard-badge">${flashcardFlipped ? "💡 Answer Revealed (Click to flip back)" : "❓ Active-Recall Question (Click card to flip)"}</div>
           <div class="flashcard-text">${formatInlineCode(flashcardFlipped ? card.back : card.front)}</div>
         </div>
         <div style="font-size:0.78rem;color:var(--text-muted);margin-top:1rem;">
-          Tap anywhere on this card to flip
+          ✨ Tap anywhere on this card to flip
         </div>
       </div>
     </div>
@@ -544,15 +585,21 @@ ${modifierPaddingFirst
 // QUIZ & CODE CHALLENGE ENGINE
 // ============================================================================
 window.answerQuiz = function(weekNum, qIdx, optIdx) {
+  const weekObj = WEEKS_DATA.find(w => w.week === weekNum);
   if (!quizAnswers[weekNum]) quizAnswers[weekNum] = {};
   quizAnswers[weekNum][qIdx] = optIdx;
   saveQuizAnswers();
+
+  if (weekObj && weekObj.quiz[qIdx] && optIdx === weekObj.quiz[qIdx].correctIndex) {
+    launchConfetti();
+  }
 
   const score = getWeekQuizScore(weekNum);
   if (score.correct >= 8 && !completedWeeks.includes(weekNum)) {
     completedWeeks.push(weekNum);
     saveCompletedWeeks();
   } else {
+    updateProgressUI();
     renderSidebar();
   }
   renderMainContent();
@@ -738,14 +785,14 @@ function renderMainContent() {
               <span>🤖 ANDROID (KOTLIN / COMPOSE)</span>
               <button class="copy-btn" onclick="copyText(this, '${encodeURIComponent(c.kotlinCode)}')">Copy</button>
             </div>
-            <pre class="code-block"><code>${escapeHtml(c.kotlinCode)}</code></pre>
+            <pre class="code-block"><code>${highlightCode(c.kotlinCode)}</code></pre>
           </div>
           <div class="code-pane">
             <div class="code-header code-header-swift">
               <span>🍎 iOS (SWIFT 6 / SWIFTUI)</span>
               <button class="copy-btn" onclick="copyText(this, '${encodeURIComponent(c.swiftCode)}')">Copy</button>
             </div>
-            <pre class="code-block"><code>${escapeHtml(c.swiftCode)}</code></pre>
+            <pre class="code-block"><code>${highlightCode(c.swiftCode)}</code></pre>
           </div>
         </div>
       </div>
@@ -850,14 +897,14 @@ function renderMainContent() {
 // Theme Switcher
 window.setTheme = function(themeName) {
   document.documentElement.setAttribute("data-theme", themeName);
-  localStorage.setItem("ios_tutorial_theme_v2", themeName);
+  localStorage.setItem("ios_tutorial_theme_v3", themeName);
   const sel = document.getElementById("theme-selector");
   if (sel && sel.value !== themeName) sel.value = themeName;
 };
 
 // Initialize App
 document.addEventListener("DOMContentLoaded", () => {
-  const savedTheme = localStorage.getItem("ios_tutorial_theme_v2") || "light";
+  const savedTheme = localStorage.getItem("ios_tutorial_theme_v3") || "aurora";
   window.setTheme(savedTheme);
   updateProgressUI();
   renderSidebar();
