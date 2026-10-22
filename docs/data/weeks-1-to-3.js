@@ -1,678 +1,799 @@
 // ============================================================================
-// WEEKS 1 TO 3: Deep-Dive Tutorials, Interactive Simulators, Flashcards & 10 Quizzes/Week
+// WEEKS 1 TO 3: Beginner-Friendly Foundations, Daily Micro-Steps & Quizzes
 // ============================================================================
 
 window.WEEKS_1_TO_3 = [
   // ==========================================================================
-  // WEEK 1: SWIFT FUNDAMENTALS & MEMORY MODEL
+  // WEEK 1: SWIFT BASICS FOR ANDROID DEVELOPERS
   // ==========================================================================
   {
     week: 1,
     dates: "Oct 20 – Oct 26",
-    title: "Swift Fundamentals & Memory Model",
-    subtitle: "Why 'Writing Kotlin in Swift Syntax' Will Bite You: Value Types (`struct`), Copy-on-Write, Deterministic ARC vs. JVM GC, `guard let`, and Algebraic Enums.",
-    androidAnchor: "Kotlin `data class`, ART Tracing GC, `val`/`var`, Elvis `?:`, `sealed interface`",
-    iosAnchor: "Swift `struct` (CoW), ARC (`weak`/`unowned`), Deep `let` Immutability, `guard let`, Associated-Value `enum`",
-    simulatorType: "arc-and-cow",
+    title: "Swift Basics for Android Developers",
+    subtitle: "A gentle kickoff: Syntax quirks, 'English sentence' argument labels, optionals without fear, and simple Structs vs Classes.",
+    androidAnchor: "`val`/`var`, `$name` string templates, named arguments, Elvis operator `?:`, basic `data class`",
+    iosAnchor: "`let`/`var`, `\\(name)` string interpolation, external argument labels, `guard let` / `??`, basic `struct`",
+    simulatorType: "syntax-playground",
     flashcards: [
-      { front: "What happens in memory when you assign `var b = a` on a Swift `struct`?", back: "It semantically copies the value so `a` and `b` are completely independent. For collections (`Array`, `String`, `Dictionary`), Swift uses Copy-on-Write (CoW): the buffer is shared until one variable mutates it." },
-      { front: "How does `let` on a Swift `struct` differ from `val` on a Kotlin `data class`?", back: "In Kotlin, `val` only locks the object reference; `var` properties inside the `data class` can still mutate. In Swift, `let` on a `struct` freezes the entire value and every nested `var` property." },
-      { front: "When does `deinit` run on a Swift `class`?", back: "Deterministically and immediately on the current thread the exact millisecond its ARC strong reference count drops to `0`." },
-      { front: "Difference between `weak` and `unowned` references in ARC?", back: "Both avoid increasing the retain count. `weak` is always an Optional `var` that becomes `nil` when the target deallocates. `unowned` is non-optional and traps (crashes) if accessed after deallocation." },
-      { front: "Why does `mutating func` exist on `struct` and `enum`, but not on `class`?", back: "Mutating a `struct` actually replaces `self` with a brand-new value in place (`inout self`). Classes mutate heap memory through a constant pointer without replacing `self`." }
+      { front: "What is the Swift equivalent of Kotlin's immutable `val`?", back: "`let`. Use `let` by default for constants, and `var` only when you need to reassign or mutate the variable." },
+      { front: "How do you do string interpolation in Swift (like Kotlin's `\"Hello $name\"`)?", back: "Use backslash and parentheses: `\"Hello \\(name)\"`. You can put full expressions inside, like `\"Next year: \\(age + 1)\"`." },
+      { front: "Why does Swift have two names for a function parameter (e.g. `func greet(to person: String)`)?", back: "The first name (`to`) is the EXTERNAL label used at the call site so code reads like an English sentence: `greet(to: \"Alex\")`. The second (`person`) is the INTERNAL name used inside the function body." },
+      { front: "How do you omit an argument label at the call site in Swift?", back: "Prefix the parameter with an underscore `_`, e.g. `func log(_ message: String)` allows `log(\"Hello\")` without a label." },
+      { front: "What is the difference between `if let` and `guard let` for unwrapping optionals?", back: "`if let` creates a variable valid only INSIDE the `{ ... }` braces. `guard let ... else { return }` forces early exit on nil and keeps the variable unwrapped for the entire rest of the function!" }
+    ],
+    dailySteps: [
+      {
+        day: 1,
+        title: "Variables, Strings & Basic Collections",
+        time: "15 mins",
+        goal: "Get comfortable declaring variables, string interpolation, and lists in Swift without typing Kotlin syntax by mistake.",
+        shift: "Swift uses `let` instead of `val`, `\\(var)` instead of `$var`, and clean bracket literals `[1, 2]` for arrays.",
+        details: [
+          "<strong>`let` vs `val`:</strong> In Swift, `let` defines a constant. If you never reassign a variable, the compiler will gently warn you to change `var` to `let`.",
+          "<strong>String Interpolation:</strong> Kotlin uses `\"Hi $name\"` or `\"Count: ${list.size}\"`. Swift uses `\"Hi \\(name)\"` or `\"Count: \\(list.count)\"`.",
+          "<strong>Collections at a Glance:</strong> Swift array literals use square brackets: `let tags = [\"android\", \"ios\"]`. Dictionary literals use colons: `let scores = [\"alice\": 95, \"bob\": 88]`."
+        ],
+        kotlinCode: `// Kotlin: Day 1 Basics
+val appName = "AndroidNews"
+var launchCount = 1
+val tags = listOf("mobile", "kotlin")
+val userProfile = mapOf("name" to "Sudhakar", "role" to "Dev")
+
+println("App: $appName (Launch #$launchCount)")
+println("First tag: \${tags.first()}")`,
+        swiftCode: `// Swift: Day 1 Basics
+let appName = "iOSNews" // 'let' = Kotlin 'val'
+var launchCount = 1    // 'var' = Kotlin 'var'
+let tags = ["mobile", "swift"] // Array literal
+let userProfile = ["name": "Sudhakar", "role": "Dev"] // Dictionary
+
+print("App: \\(appName) (Launch #\\(launchCount))")
+print("First tag: \\(tags.first ?? \"none\")")`
+      },
+      {
+        day: 2,
+        title: "Functions & 'English Sentence' Argument Labels",
+        time: "15 mins",
+        goal: "Master external vs. internal argument labels so you can read and write idiomatic Apple APIs.",
+        shift: "Swift functions are deliberately designed to read like readable English sentences when called.",
+        details: [
+          "<strong>The Two-Name Rule:</strong> `func transfer(amount: Double, from source: Account, to destination: Account)`. At the call site, it reads naturally: `transfer(amount: 50, from: checking, to: savings)`.",
+          "<strong>Omitting Labels with `_`:</strong> If a parameter label feels redundant, put `_` before the name: `func printMessage(_ text: String)` lets you call `printMessage(\"Hello\")` just like in Kotlin.",
+          "<strong>Default Values:</strong> Just like Kotlin, you can give parameters default values: `func load(timeout: Int = 30)`."
+        ],
+        kotlinCode: `// Kotlin: Named arguments exist, but parameter names are fixed
+fun greet(name: String, prefix: String = "Hello") {
+    println("$prefix, $name!")
+}
+// Call site:
+greet("Sudhakar")
+greet("Sudhakar", prefix = "Hi")`,
+        swiftCode: `// Swift: External argument label 'to' + internal name 'name'
+func greet(to name: String, withPrefix prefix: String = "Hello") {
+    print("\\(prefix), \\(name)!")
+}
+// Call site reads like an English sentence!
+greet(to: "Sudhakar")
+greet(to: "Sudhakar", withPrefix: "Hi")
+
+// Omitting external label using '_'
+func square(_ number: Int) -> Int {
+    number * number
+}
+print(square(5)) // No label needed!`
+      },
+      {
+        day: 3,
+        title: "Optionals Made Simple: Safe Calls, `??` & `guard let`",
+        time: "15 mins",
+        goal: "Handle nullability in Swift using safe calls `?`, default values `??`, and early-exit `guard let`.",
+        shift: "Kotlin uses `?:` (Elvis) for defaults; Swift uses `??`. Kotlin smart-casts after `!= null`; Swift uses `if let` or `guard let`.",
+        details: [
+          "<strong>The Nil-Coalescing Operator (`??`):</strong> Swift's `name ?? \"Guest\"` is identical to Kotlin's Elvis operator `name ?: \"Guest\"`.",
+          "<strong>`guard let` for Early Exit:</strong> Instead of nesting code inside deep `if` statements, Swift uses `guard let user = optionalUser else { return }`. The variable `user` stays valid for the entire rest of the function!",
+          "<strong>Safe Unwrapping Shorthand:</strong> In modern Swift, if the variable name is the same, you can write `if let name { ... }` or `guard let name else { return }`."
+        ],
+        kotlinCode: `// Kotlin: Null safety & Elvis operator
+fun displayUser(name: String?, age: Int?) {
+    // Elvis operator ?:
+    val displayName = name ?: "Guest"
+
+    // Smart casting
+    if (age != null) {
+        println("$displayName is $age years old")
+    }
+
+    // Early return
+    val verifiedAge = age ?: return
+    println("Verified age: $verifiedAge")
+}`,
+        swiftCode: `// Swift: Optionals, ?? and guard let
+func displayUser(name: String?, age: Int?) {
+    // Nil-coalescing operator ??
+    let displayName = name ?? "Guest"
+
+    // if let: scoped inside braces
+    if let age {
+        print("\\(displayName) is \\(age) years old")
+    }
+
+    // guard let: early exit, keeps variable in scope!
+    guard let age else {
+        return
+    }
+    print("Verified age: \\(age)")
+}`
+      },
+      {
+        day: 4,
+        title: "Structs, Classes & Enums (The Beginner Rule)",
+        time: "15 mins",
+        goal: "Know when to create a `struct` vs a `class`, and how Swift enums replace Kotlin sealed classes.",
+        shift: "Simple rule of thumb: Default to `struct` for data models and state; use `class` only when you need shared reference identity.",
+        details: [
+          "<strong>The Golden Rule:</strong> 90% of your models in Swift will be `struct` (lightweight, value-type). You use `class` mostly for long-lived stateful services or ViewModels.",
+          "<strong>Automatic Initializers:</strong> A Swift `struct` gets a free memberwise initializer (`User(id: \"1\", name: \"Alex\")`) generated by the compiler—just like a Kotlin `data class`!",
+          "<strong>Enums with Associated Values:</strong> In Kotlin, an `enum class` cannot hold different data per case, so you use a `sealed interface`. In Swift, standard `enum`s carry data directly!"
+        ],
+        kotlinCode: `// Kotlin: data class + sealed interface
+data class User(val id: String, val name: String)
+
+sealed interface ScreenState {
+    data object Loading : ScreenState
+    data class Success(val user: User) : ScreenState
+    data class Error(val message: String) : ScreenState
+}`,
+        swiftCode: `// Swift: struct + enum with associated values
+struct User {
+    let id: String
+    let name: String
+} // Free memberwise initializer generated!
+
+enum ScreenState {
+    case loading
+    case success(user: User)
+    case error(message: String)
+}
+
+let state: ScreenState = .success(user: User(id: "1", name: "Sudhakar"))`
+      },
+      {
+        day: 5,
+        title: "Week 1 Hands-On Lab, Confidence Quiz & LinkedIn Post",
+        time: "20 mins",
+        goal: "Put the 4 days of Swift basics into practice in Xcode or Swift Playgrounds, test your understanding with a friendly quiz, and publish your week's reflection on LinkedIn.",
+        shift: "Reflect on how familiar Swift feels once you know the 3-4 small syntax differences.",
+        details: [
+          "<strong>Step 1:</strong> Run through the Week 1 coding challenge in the Practice tab.",
+          "<strong>Step 2:</strong> Take the 5-question confidence check.",
+          "<strong>Step 3:</strong> Copy the ready-made Week 1 LinkedIn post and share your learning journey with your network!"
+        ],
+        kotlinCode: `// Practice: Combine what you learned in Kotlin
+fun createBadge(name: String?, role: String = "Member"): String {
+    val cleanName = name?.trim()?.takeIf { it.isNotEmpty() } ?: "Guest"
+    return "[$role] $cleanName"
+}`,
+        swiftCode: `// Practice: Combine what you learned in Swift
+func createBadge(for name: String?, withRole role: String = "Member") -> String {
+    guard let name = name?.trimmingCharacters(in: .whitespaces), !name.isEmpty else {
+        return "[\\(role)] Guest"
+    }
+    return "[\\(role)] \\(name)"
+}
+print(createBadge(for: "Sudhakar", withRole: "Android Dev"))`
+      }
     ],
     concepts: [
       {
-        heading: "1. Value Semantics (`struct`) vs. Heap Reference Semantics (`class`)",
-        shift: "In Kotlin on the JVM, almost every object—including a `data class`—is a heap-allocated reference type. In Swift, `struct` is the default building block and is a true VALUE type allocated inline on the stack (or inside its owning container).",
+        heading: "1. Swift Syntax Quirks for Kotlin Developers",
+        shift: "Kotlin uses `val`, `$variable`, and `listOf()`. Swift uses `let`, `\\(variable)`, and `[\"item1\", \"item2\"]` array literals.",
         details: [
-          "<strong>Stack vs. Heap Allocation:</strong> Allocating a Swift `struct` without reference properties requires zero heap allocation, zero lock contention, and zero reference-counting overhead—just moving the stack pointer.",
-          "<strong>Deep Immutability of `let`:</strong> When you declare `let user = User(name: \"Alex\")` where `User` is a `struct`, even properties declared as `var` inside `User` cannot be modified. The value is frozen at the bit level.",
-          "<strong>The `mutating` Keyword Contract:</strong> Methods on a `struct` or `enum` are read-only by default. To modify any property (or reassign `self = ...`), you must mark the method `mutating func`, which passes `self` as an implicit `inout` parameter."
+          "<strong>Immutable by Default:</strong> In Swift, use `let` for all values that don't change. The compiler will give you a suggestion if you use `var` unnecessarily.",
+          "<strong>String Interpolation:</strong> `\"Hello \\(user.name)\"` works anywhere inside double quotes and can execute expressions like `\"Total: \\(price * 1.08)\"`."
         ],
-        kotlinCode: `// Kotlin: Heap-allocated reference type
-data class UserProfile(
-    val id: String,
-    var followerCount: Int
-)
-
-fun demo() {
-    val profileA = UserProfile("u1", 100)
-    val profileB = profileA // Copies the 64-bit heap pointer!
-    profileB.followerCount = 999
-
-    println(profileA.followerCount) // Prints 999! Both point to same object
-    profileA.followerCount = 500    // Legal in Kotlin even though profileA is 'val'!
-}`,
-        swiftCode: `// Swift: Inline/Stack-allocated value type
-struct UserProfile {
-    let id: String
-    var followerCount: Int
-
-    mutating func increment() {
-        followerCount += 1
-    }
+        kotlinCode: `val language = "Kotlin"
+var version = 2.0
+val features = listOf("Coroutines", "Compose")
+println("Learning $language $version with \${features.size} features")`,
+        swiftCode: `let language = "Swift"
+var version = 6.0
+let features = ["Concurrency", "SwiftUI"]
+print("Learning \\(language) \\(version) with \\(features.count) features")`
+      },
+      {
+        heading: "2. The 'English Sentence' Rule for Functions",
+        shift: "Swift functions have both external argument labels (for readable call sites) and internal parameter names (for function bodies).",
+        details: [
+          "<strong>Natural Call Sites:</strong> `func downloadFile(from url: URL, to directory: URL)`. Calling it reads like a sentence: `downloadFile(from: webURL, to: documentsURL)`.",
+          "<strong>Omission with `_`:</strong> If the first parameter is obvious from the function name (e.g. `save(user)`), prefix with `_` to omit the label."
+        ],
+        kotlinCode: `fun sendEmail(to: String, subject: String, body: String) {
+    println("Sending to $to: $subject")
 }
-
-func demo() {
-    let profileA = UserProfile(id: "u1", followerCount: 100)
-    var profileB = profileA // Copies the VALUE!
-    profileB.increment()
-
-    print(profileA.followerCount) // Prints 100 (Untouched!)
-    print(profileB.followerCount) // Prints 101
-    // profileA.increment()       // ❌ Compile error: profileA is a 'let' constant
+sendEmail("alex@example.com", "Hi", "Hello there")`,
+        swiftCode: `func sendEmail(to recipient: String, subject: String, body: String) {
+    print("Sending to \\(recipient): \\(subject)")
+}
+sendEmail(to: "alex@example.com", subject: "Hi", body: "Hello there")`
+      },
+      {
+        heading: "3. Optionals: `??`, `if let`, and the `guard let` Golden Path",
+        shift: "Instead of deep nesting or explicit `!= null` checks, Swift uses `guard let` to handle preconditions and keep your code flat.",
+        details: [
+          "<strong>Nil-Coalescing:</strong> `let title = rawTitle ?? \"Untitled\"` works exactly like Kotlin's Elvis operator `rawTitle ?: \"Untitled\"`.",
+          "<strong>The Golden Path:</strong> `guard let` verifies that required inputs exist right at the top of a function, exiting immediately if they are missing."
+        ],
+        kotlinCode: `fun processOrder(orderId: String?) {
+    val id = orderId ?: return
+    println("Processing order: $id")
+}`,
+        swiftCode: `func processOrder(orderId: String?) {
+    guard let id = orderId else {
+        return
+    }
+    print("Processing order: \\(id)")
 }`
       },
       {
-        heading: "2. Copy-on-Write (CoW): How Swift Collections Stay Fast",
-        shift: "If `Array`, `Dictionary`, and `String` are value-type `struct`s in Swift, why doesn't passing a 100,000-element array into a function copy 100,000 elements? Because Swift uses Copy-on-Write (CoW).",
+        heading: "4. When to Use `struct` vs `class` & Algebraic Enums",
+        shift: "Beginner rule of thumb: Default to `struct` for models and views; use `class` only for services and stateful ViewModels.",
         details: [
-          "<strong>Shared Buffer on Read ($O(1)$):</strong> Internally, a Swift `Array<T>` struct holds an internal reference to a contiguous heap buffer. When you write `var b = a`, both structs point to the same buffer (retain count = 2). Reading is $O(1)$.",
-          "<strong>Lazy Duplication on Mutation ($O(N)$ only when needed):</strong> The moment you call `b.append(newItem)`, `Array` checks `isKnownUniquelyReferenced(&storage)`. Since the buffer's retain count is `2`, `b` allocates a fresh buffer copy before mutating, leaving `a` untouched!"
+          "<strong>`struct` is a Value Type:</strong> Passing a `struct` to a function or assigning it to a new variable creates a safe copy—no unexpected mutations across threads!",
+          "<strong>Enums with Associated Values:</strong> One Swift `enum` can represent loading, success with data, and error states without writing separate subclasses."
         ],
-        kotlinCode: `// Kotlin: List vs MutableList shares the underlying reference unless explicitly copied
-val listA = mutableListOf(1, 2, 3)
-val listB = listA // Same list instance!
-listB.add(4)
-println(listA) // [1, 2, 3, 4] — listA was mutated!`,
-        swiftCode: `// Swift: Value semantics with Copy-on-Write (CoW) optimization
-var listA = [1, 2, 3]
-var listB = listA // O(1) assignment: shares buffer until mutated!
+        kotlinCode: `data class Book(val title: String, val author: String)
 
-// Buffer is duplicated right here before appending 4:
-listB.append(4)
-
-print(listA) // [1, 2, 3] — 100% isolated!
-print(listB) // [1, 2, 3, 4]`
-      },
-      {
-        heading: "3. Automatic Reference Counting (ARC) vs. Tracing Garbage Collection",
-        shift: "Android's ART runtime uses a tracing Garbage Collector that periodically sweeps unreachable object graphs (even if they contain cycles). Swift uses compile-time ARC for `class` instances and closures: memory is freed immediately when `retainCount == 0`, but strong reference cycles (`A <-> B`) leak forever.",
-        details: [
-          "<strong>Deterministic Deinitialization (`deinit`):</strong> In Kotlin/Java, `finalize()` / `Cleaner` runs at an unpredictable future time. In Swift, `deinit` runs synchronously the exact line of code where the last strong reference disappears.",
-          "<strong>`weak` vs `unowned`:</strong> Use `weak var` whenever the referenced object can become `nil` during your lifetime (delegates, parent references, async callbacks). Use `unowned` only when the other object is strictly guaranteed to outlive you.",
-          "<strong>Closure Capture Lists (`[weak self]`):</strong> In Swift, closures are reference types. If a class stores a closure in a property AND that closure references `self`, you have a retain cycle unless the closure uses `[weak self] in`."
-        ],
-        kotlinCode: `// Kotlin: Lambda captures 'this' strongly, but ART's tracing GC
-// still frees both ViewModel and lambda once ViewModel is unreachable.
-class ProfileViewModel {
-    var onStateChange: (() -> Unit)? = null
-    fun setup() {
-        onStateChange = { refresh() }
-    }
-    fun refresh() {}
+sealed interface UIState {
+    data object Loading : UIState
+    data class Success(val books: List<Book>) : UIState
 }`,
-        swiftCode: `// Swift: Must break the cycle between self -> onStateChange -> self!
-final class ProfileViewModel {
-    var onStateChange: (() -> Void)?
-
-    func setup() {
-        onStateChange = { [weak self] in
-            guard let self else { return }
-            self.refresh()
-        }
-    }
-    func refresh() {}
-    deinit { print("Freed immediately when screen pops!") }
-}`
-      },
-      {
-        heading: "4. Optionals (`Optional<Wrapped>`), `guard let`, and Algebraic Enums",
-        shift: "In Swift, `String?` is literally an `enum Optional<Wrapped> { case none; case some(Wrapped) }`. You unwrap it with `if let` (scoped to braces) or `guard let` (early-exit precondition that keeps the variable unwrapped for the entire function).",
-        details: [
-          "<strong>`guard let` Golden Path:</strong> The Swift compiler enforces that a `guard` block's `else` clause MUST exit the current scope (`return`, `throw`, `break`, `continue`, or `fatalError`).",
-          "<strong>Enums with Associated Values + Pattern Matching:</strong> Unlike Kotlin `enum class`, Swift enums carry per-case payloads and remain value types—replacing Kotlin's heap-allocated `sealed interface` hierarchies."
-        ],
-        kotlinCode: `// Kotlin: Elvis early return + sealed interface
-sealed interface LoadState<out T> {
-    data object Idle : LoadState<Nothing>
-    data class Loaded<T>(val data: T, val cached: Boolean) : LoadState<T>
-    data class Failed(val code: Int) : LoadState<Nothing>
+        swiftCode: `struct Book {
+    let title: String
+    let author: String
 }
 
-fun process(input: String?): String {
-    val clean = input?.trim()?.takeIf { it.isNotEmpty() } ?: return "Empty"
-    return "Valid: $clean"
-}`,
-        swiftCode: `// Swift: Value-type enum with associated values + guard let
-enum LoadState<T> {
-    case idle
-    case loaded(data: T, cached: Bool)
-    case failed(code: Int)
-}
-
-func process(input: String?) -> String {
-    guard let clean = input?.trimmingCharacters(in: .whitespaces),
-          !clean.isEmpty else {
-        return "Empty"
-    }
-    return "Valid: \\(clean)"
+enum UIState {
+    case loading
+    case success(books: [Book])
 }`
       }
     ],
     quiz: [
       {
-        question: "1. Given `struct Ticket { var seat: String }` and `let t1 = Ticket(seat: \"12A\")`, what happens when you execute `var t2 = t1; t2.seat = \"99Z\"`?",
+        question: "1. Which keyword is used in Swift to declare an immutable constant (equivalent to Kotlin's `val`)?",
         options: [
-          "Compiler error on `var t2 = t1` because `t1` is declared with `let`",
-          "`t1.seat` remains \"12A\" and `t2.seat` becomes \"99Z\" because assigning a `struct` copies the value",
-          "Both `t1.seat` and `t2.seat` become \"99Z\" because they share the same pointer",
-          "Runtime crash due to mutating a frozen struct"
+          "`val`",
+          "`let`",
+          "`const`",
+          "`immutable`"
         ],
         correctIndex: 1,
-        explanation: "Because `Ticket` is a value-type `struct`, `var t2 = t1` creates an independent mutable copy in `t2`. `t1` stays frozen at \"12A\" while `t2.seat` updates to \"99Z\"."
+        explanation: "In Swift, `let` declares an immutable constant. Use `let` whenever the value will not be reassigned."
       },
       {
-        question: "2. What happens if you declare `let user = UserClass(name: \"Alex\")` where `UserClass` is a Swift `class` with `var name: String`, and then write `user.name = \"Sam\"`?",
+        question: "2. How do you print `\"User: Alice (Score: 100)\"` using string interpolation in Swift?",
         options: [
-          "Compiler error because `user` is a `let` constant",
-          "It compiles and mutates `user.name` to \"Sam\" because `let` on a `class` only locks the reference pointer, just like Kotlin's `val`",
-          "It creates a copy of `UserClass` automatically",
-          "It crashes at runtime with an ARC violation"
+          "`print(\"User: $name (Score: $score)\")`",
+          "`print(\"User: \\(name) (Score: \\(score))\")`",
+          "`print(\"User: %name (Score: %score)\")`",
+          "`print(\"User: \" + name + \" (Score: \" + score + \")\")` only"
         ],
         correctIndex: 1,
-        explanation: "On a reference type (`class`), `let` only prevents reassigning the pointer (`user = UserClass(...)`). Mutating its `var` properties is completely legal—unlike a `struct`!"
+        explanation: "Swift string interpolation uses the syntax `\\(expression)` inside double quotes."
       },
       {
-        question: "3. Why doesn't passing a 50,000-item Swift `Array` to a function duplicate all 50,000 items in memory immediately?",
+        question: "3. What is the purpose of the underscore `_` in `func calculateArea(_ width: Double, _ height: Double)`?",
         options: [
-          "Because `Array` is actually a `class` in Swift",
-          "Because Swift arrays use Copy-on-Write (CoW), sharing the internal heap buffer until one of the copies is mutated",
-          "Because Swift passes all parameters by pointer reference by default",
-          "Because the Garbage Collector compresses arrays"
+          "It marks the parameters as private",
+          "It tells the compiler that callers do NOT need to specify argument labels at the call site (e.g. `calculateArea(10, 20)`)",
+          "It marks the parameters as nullable",
+          "It ignores the arguments"
         ],
         correctIndex: 1,
-        explanation: "Swift standard library collections (`Array`, `Dictionary`, `String`, `Set`) are `struct`s backed by Copy-on-Write (CoW) storage. The buffer is only copied if a mutation occurs while `retainCount > 1`."
+        explanation: "Prefixing a parameter with an underscore `_` suppresses the external argument label, allowing the function to be called positionally without labels."
       },
       {
-        question: "4. Why must a `weak` property in Swift always be declared as an Optional `var` (e.g., `weak var delegate: MyDelegate?`)?",
+        question: "4. What is the Swift equivalent of Kotlin's Elvis operator `name ?: \"Default\"`?",
         options: [
-          "Because Swift classes don't support `let` properties",
-          "Because when the target object's retain count drops to 0 and it deallocates, ARC automatically sets the `weak` property to `nil`",
-          "Because `weak` properties are lazily initialized from disk",
-          "Only Objective-C protocols require `weak var`"
+          "`name ?? \"Default\"` (the nil-coalescing operator)",
+          "`name ?: \"Default\"`",
+          "`name || \"Default\"`",
+          "`name.getOrDefault(\"Default\")`"
         ],
-        correctIndex: 1,
-        explanation: "ARC zeroes out weak references the moment the target object deallocates. Since its value can change to `nil` at runtime, it must be both mutable (`var`) and nullable (`Optional`)."
+        correctIndex: 0,
+        explanation: "Swift uses the nil-coalescing operator `??` to unwrap an optional or provide a fallback value."
       },
       {
-        question: "5. What happens if you access an `unowned` reference after the object it points to has already been deallocated?",
+        question: "5. What is the main advantage of `guard let` over `if let` when validating inputs at the top of a function?",
         options: [
-          "It safely returns `nil`",
-          "It triggers an immediate deterministic runtime trap (crash), similar to force-unwrapping `nil!`",
-          "It resurrects the object from the heap",
-          "It returns a default empty instance"
+          "`guard let` runs faster at runtime",
+          "`guard let` forces an early exit if the value is `nil` and keeps the unwrapped variable in scope for the rest of the function (preventing nested indentation)",
+          "`guard let` can only be used on numbers",
+          "`guard let` automatically catches exceptions"
         ],
         correctIndex: 1,
-        explanation: "Unlike `weak`, an `unowned` reference is non-optional and does not become `nil`. Accessing it after its target deallocates causes an immediate runtime trap."
+        explanation: "`guard let` enforces the 'Golden Path': you handle errors/nil early and exit, leaving the unwrapped variable in scope for the rest of your clean, unindented logic."
       },
       {
-        question: "6. Why does a method inside a Swift `struct` require the `mutating` keyword to modify one of the struct's properties?",
+        question: "6. As an Android developer building modern iOS apps, what should be your default choice for data models?",
         options: [
-          "To enable multithreaded locking automatically",
-          "Because modifying a value type semantically replaces the entire struct instance (`inout self`), so the compiler must prevent calling it on `let` constants",
-          "Because struct properties are stored in ROM",
-          "Only `private` methods need `mutating`"
+          "`class` (Reference Type)",
+          "`struct` (Value Type)",
+          "`NSObject`",
+          "`AnyObject`"
         ],
         correctIndex: 1,
-        explanation: "`mutating` tells the Swift compiler that the method mutates `self` in place (`inout`), allowing the compiler to forbid calling that method on `let` struct constants."
+        explanation: "In modern Swift and SwiftUI, `struct` is the default choice for models, collections, and views because of its safety, speed, and automatic value semantics."
       },
       {
-        question: "7. What is the key scoping difference between `if let user = optionalUser` and `guard let user = optionalUser else { return }`?",
+        question: "7. In Swift, how do you declare an array containing the numbers `1, 2, 3`?",
         options: [
-          "`if let` is faster at runtime than `guard let`",
-          "With `if let`, `user` is only in scope inside the `if` braces; with `guard let`, `user` remains unwrapped and in scope for the entire rest of the function",
-          "`guard let` can only be used inside loops",
-          "`if let` forces the function to return early"
+          "`listOf(1, 2, 3)`",
+          "`[1, 2, 3]`",
+          "`Array(1, 2, 3)`",
+          "`new int[]{1, 2, 3}`"
         ],
         correctIndex: 1,
-        explanation: "`guard let` enforces an early exit if the value is `nil`, which guarantees to the compiler that the unwrapped variable is valid for the remainder of the enclosing scope."
+        explanation: "Swift uses simple bracket literals `[1, 2, 3]` to initialize arrays."
       },
       {
-        question: "8. Under the hood in the Swift Standard Library, what is `String?` syntactic sugar for?",
+        question: "8. How do you call a Swift function defined as `func navigate(to screen: String)`?",
         options: [
-          "A nullable JVM `java.lang.String` pointer",
-          "`enum Optional<String> { case none; case some(String) }`",
-          "A `class NullableString` box allocated on the heap",
-          "A C pointer `char*`"
+          "`navigate(\"Home\")`",
+          "`navigate(to: \"Home\")`",
+          "`navigate(screen = \"Home\")`",
+          "`navigate(to = \"Home\")`"
         ],
         correctIndex: 1,
-        explanation: "In Swift, `T?` is a genuine generic value-type enumeration `Optional<T>` with two cases: `.none` (`nil`) and `.some(T)`."
+        explanation: "Swift uses a colon `:` after the external argument label at the call site: `navigate(to: \"Home\")`."
       },
       {
-        question: "9. In Swift, what happens if a `struct` contains a property that is a `class` instance (e.g., `struct Wrapper { var ref: MyClass }`) and you copy the struct (`var w2 = w1`)?",
+        question: "9. What does the shorthand `if let name { ... }` do in modern Swift (Swift 5.7+)?",
         options: [
-          "Swift deep-copies `MyClass` automatically",
-          "The struct itself is copied, but both `w1.ref` and `w2.ref` point to the SAME `MyClass` instance on the heap (incrementing its ARC retain count by 1)",
-          "The compiler rejects classes inside structs",
-          "The class is converted into a struct at compile time"
+          "It is a syntax error",
+          "It safely unwraps the optional `name` and creates a non-optional variable also named `name` inside the braces (equivalent to `if let name = name`)",
+          "It checks if `name.isEmpty`",
+          "It makes `name` a global variable"
         ],
         correctIndex: 1,
-        explanation: "This is a classic senior iOS interview question! Copying a `struct` performs a shallow bitwise/memberwise copy of its fields—if one field is a `class` reference, the reference pointer is copied (and retained via ARC), sharing the underlying class instance unless you implement Copy-on-Write."
+        explanation: "`if let name` is a handy shorthand for `if let name = name`, eliminating repetitive variable naming when unwrapping."
       },
       {
-        question: "10. Why do experienced Swift engineers avoid adding a `default:` branch when switching over their own domain `enum`?",
+        question: "10. How do Swift `enum`s with associated values compare to Kotlin?",
         options: [
-          "`default:` is not allowed on enums with associated values",
-          "Using `default:` silences the compiler's exhaustiveness check when a new `case` is added to the enum later, hiding unhandled states",
-          "`default:` allocates extra heap memory",
-          "`default:` falls through to the next case automatically"
+          "They are identical to Java enums",
+          "They serve the same purpose as Kotlin `sealed class` or `sealed interface` hierarchies, allowing each case to carry its own custom data payload",
+          "They cannot hold any data",
+          "They can only store integer values"
         ],
         correctIndex: 1,
-        explanation: "Without `default:`, adding a new case to an `enum` causes the compiler to immediately highlight every `switch` statement that needs to handle the new state."
+        explanation: "Swift enums with associated values (like `case success(User)`) provide the power of algebraic data types without needing to create a separate class hierarchy like in Kotlin."
       }
     ],
     codeChallenge: {
-      instructions: "Complete all 3 Week 1 fixes below: (1) Mark `addItem` as `mutating func`, (2) Break the retain cycle in `DownloadTask` using `weak var`, and (3) Unwrap `username` in `formatUserBadge` using `guard let`.",
-      starterCode: `struct ShoppingCart {
-    var items: [String]
-    // TODO 1: Add 'mutating' before func
-    func addItem(_ item: String) {
-        items.append(item)
-    }
-}
+      instructions: "Complete the Week 1 Mini-Lab: (1) Declare constant `appName` with `let`, (2) Write a function `greet(to name: String?)` with `guard let`, and (3) Use `??` to provide a fallback of `'Guest'`.",
+      starterCode: `// TODO 1: Use 'let' to declare appName = "Academy"
+var appName = "Academy"
 
-class DownloadTask {
-    // TODO 2: Use 'weak var' to avoid a retain cycle with manager
-    var manager: AnyObject?
-}
-
-func formatUserBadge(username: String?) -> String {
-    // TODO 3: Use 'guard let' to unwrap username and check !username.isEmpty
+// TODO 2: Write greet(to name: String?) -> String
+// Use guard let to check name, or return "Hello, Guest from \\(appName)!"
+func greet(to name: String?) -> String {
     return "TODO"
 }`,
-      solutionCode: `struct ShoppingCart {
-    var items: [String]
-    mutating func addItem(_ item: String) {
-        items.append(item)
+      solutionCode: `let appName = "Academy"
+
+func greet(to name: String?) -> String {
+    guard let name, !name.isEmpty else {
+        return "Hello, Guest from \\(appName)!"
     }
-}
-
-class DownloadTask {
-    weak var manager: AnyObject?
-}
-
-func formatUserBadge(username: String?) -> String {
-    guard let username, !username.isEmpty else {
-        return "Anonymous"
-    }
-    return "@\\(username)"
+    return "Hello, \\(name) from \\(appName)!"
 }`,
-      simulatedOutput: `✓ ShoppingCart(items: ["MacBook", "AirPods"]) — Mutated copy cleanly!
-✓ DownloadTask & DownloadManager deinit called (retainCount -> 0)
-✓ formatUserBadge(nil) -> "Anonymous"
-✓ formatUserBadge("sudhakar") -> "@sudhakar"`,
-      requiredTokens: ["mutating func", "weak var", "guard let"]
+      simulatedOutput: `✓ let appName constant initialized cleanly
+✓ greet(to: nil) -> "Hello, Guest from Academy!"
+✓ greet(to: "Sudhakar") -> "Hello, Sudhakar from Academy!"`,
+      requiredTokens: ["let appName", "func greet(to name: String?)", "guard let"]
     },
-    linkedinPost: `I’m an Android developer, and for the next 10 weeks before New Year’s, I’m learning modern iOS development from the ground up—and documenting every architectural difference in public. 📱🚀
+    linkedinPost: `Week 1 as an Android Developer Learning iOS Before New Year! 📱🚀
 
-When you first look at Kotlin and Swift side-by-side, they look 80% identical. Because of that, it’s dangerously easy for an Android engineer to write "Kotlin with Swift syntax."
+This week I took my first steps into modern Swift (after years of writing Kotlin & Jetpack Compose).
+Coming from Android, here were the 3 syntax quirks that surprised me most in Week 1:
 
-In Week 1, I went under the hood of Swift’s type system and memory model. Here are the 4 biggest mental shifts:
+1️⃣ The "English Sentence" Function Rule
+In Kotlin: sendEmail(user, "Welcome")
+In Swift: sendEmail(to: user, withSubject: "Welcome")
+Swift functions have external labels so call sites read like natural English sentences!
 
-1️⃣ struct != Kotlin’s data class (True Value Types & Copy-on-Write)
-In Kotlin, a data class is still a reference type on the JVM heap. In Swift, struct is a true value type—and declaring 'let user = User()' freezes the entire struct and all its inner 'var' properties!
+2️⃣ Optionals & The "Golden Path" with guard let
+Instead of nesting logic inside deep if-checks or smart-casts, Swift pushes you to use 'guard let'. You check preconditions at the top and exit early, keeping the rest of your function flat and unindented.
 
-2️⃣ No Garbage Collector — Welcome to Deterministic ARC & Retain Cycles
-Android’s ART uses tracing GC. iOS uses compile-time Automatic Reference Counting (ARC). The millisecond a class’s retain count hits 0, deinit runs deterministically—unless two objects hold strong references to each other (Retain Cycle).
+3️⃣ let vs val, \\(x) vs $x
+Switching muscle memory from 'val' to 'let' and '$name' to '\\(name)' took about 2 days—now it feels second nature.
 
-3️⃣ Swift Enums = Kotlin sealed interface (as a Value Type!)
-Standard Swift enums carry associated values per case without heap-allocating subclasses.
+Next week: Diving into Protocols (Kotlin Interfaces) and building my first SwiftUI screen!
 
-4️⃣ The "Golden Path" with compiler-enforced guard let
-Unlike 'if let' (which scopes the unwrapped variable inside braces), 'guard let' forces an early exit and keeps the unwrapped variable alive for the entire function.
+📖 Follow my interactive learning notes, roadmap & code labs on GitHub:
+🔗 https://github.com/sudhakar-r08/ios-for-android-devs
+🌐 Tutorial Site: https://sudhakar-r08.github.io/ios-for-android-devs/
 
-📖 Try the interactive Week 1 tutorial, ARC Memory Simulator, and 10-question quiz on my learning site:
-🔗 https://sudhakar-r08.github.io/ios-for-android-devs/
-📂 GitHub Repo: https://github.com/sudhakar-r08/ios-for-android-devs
+#AndroidDev #iOSDev #Kotlin #Swift #MobileDevelopers #LearningInPublic`,
+    linkedinArticle: `# From Kotlin to Swift (Week 1): An Android Developer's First Impressions
 
-#AndroidDev #iOSDev #Kotlin #Swift #MobileEngineering #SwiftUI #JetpackCompose`,
-    linkedinArticle: `# From Kotlin to Swift (Week 1): Why "Writing Kotlin in Swift Syntax" Will Bite You
+Opening Xcode for the first time as an experienced Android engineer is a mix of familiarity and disorientation. You know how software architecture works, but your fingers instinctively type \`val\`, \`fun\`, and \`$variable\`.
 
-As an Android developer, opening a Swift file for the first time feels deceptively familiar. You see \`let\` and \`var\` instead of \`val\` and \`var\`, \`String?\` for nullability, \`??\` instead of the Elvis operator \`?:\`, and trailing closures that look just like Kotlin lambdas.
-
-It is tempting to assume Swift is simply "Apple's Kotlin." That assumption is the #1 trap for Android engineers transitioning to iOS. Beneath the surface syntax, **Swift and Kotlin operate on fundamentally different memory models and type philosophies**.
-
----
-
-## 1. Value Types (\`struct\`) vs. Reference Types (\`class\`)
-
-In Kotlin on the JVM, nearly every object—including a \`data class\`—is a **reference type** stored on the heap. When you assign \`val b = a\`, both variables point to the same memory address.
-
-In Swift, **\`struct\` is the default building block—and it is a true value type**. \`String\`, \`Array\`, \`Dictionary\`, and even \`SwiftUI\` views are all structs.
-- Assigning \`var b = a\` copies the value semantically.
-- Declaring \`let profile = UserProfile(...)\` makes the entire struct deeply immutable—even its \`var\` properties cannot be changed!
-- How do Swift collections stay fast when copied? **Copy-on-Write (CoW)**: multiple copies of an \`Array\` share the same underlying heap buffer until one of them is mutated.
+In Week 1 of my "Android to iOS Before New Year" challenge, I focused strictly on building comfort with Swift syntax and idiomatic patterns. Here are the biggest takeaways.
 
 ---
 
-## 2. Deterministic ARC vs. Tracing Garbage Collection
+## 1. \`let\` vs \`val\` & String Interpolation
 
-Android's ART runtime uses a tracing Garbage Collector that periodically sweeps unreachable object islands—even if objects inside that island reference each other in a cycle.
+In Kotlin:
+\`\`\`kotlin
+val name = "Sudhakar"
+println("Hello, $name!")
+\`\`\`
 
-Swift uses **Automatic Reference Counting (ARC)** for \`class\` instances and closures:
-- The compiler inserts \`retain\` (+1) and \`release\` (-1) operations at compile time.
-- The exact instant an object's reference count drops to \`0\`, \`deinit\` runs deterministically on the spot.
-- **The Trap:** If \`Parent\` strongly holds \`Child\` and \`Child\` strongly holds \`Parent\` (or a stored closure strongly captures \`self\`), their reference counts never hit \`0\`. You must break the cycle with \`weak var\` or \`[weak self] in\`.
+In Swift:
+\`\`\`swift
+let name = "Sudhakar"
+print("Hello, \\(name)!")
+\`\`\`
 
----
-
-## 3. \`guard let\` and Algebraic Enums
-
-Where Kotlin relies on smart casts or \`val x = input ?: return\`, Swift provides \`guard let\`, a dedicated precondition statement whose \`else\` block is compiler-enforced to exit the scope—keeping your happy path unindented.
-
-And where Kotlin requires a \`sealed interface\` hierarchy to attach different payloads to different states, Swift's standard \`enum\` supports **Associated Values** directly as a lightweight value type.
-
-🔗 **Interactive Tutorial & Live ARC Simulator:** https://sudhakar-r08.github.io/ios-for-android-devs/`
-  },
-
-  // ==========================================================================
-  // WEEK 2: PROTOCOLS, GENERICS & TYPED ERROR HANDLING
-  // ==========================================================================
-  {
-    week: 2,
-    dates: "Oct 27 – Nov 02",
-    title: "Protocols, Generics & Typed Error Handling",
-    subtitle: "Protocol-Oriented Programming (`protocol` vs Kotlin `interface`), `associatedtype`, Opaque Types (`some` vs `any`), and Zero-Cost `throws`.",
-    androidAnchor: "Kotlin `interface`, Generics `<T>`, Extension Functions, Unchecked Exceptions / `runCatching`",
-    iosAnchor: "Swift `protocol`, `associatedtype`, `some` (Opaque Static) vs `any` (Existential Box), Typed `throws`",
-    simulatorType: "dispatch-explorer",
-    flashcards: [
-      { front: "What is Retroactive Conformance in Swift?", back: "Using an `extension` to make an existing type (even a standard library struct like `String` or `Int` that you don't own) conform to a `protocol`." },
-      { front: "Difference between `some View` (Opaque Type) and `any View` (Existential Type)?", back: "`some View` preserves the single concrete underlying type at compile time (enabling fast static dispatch and zero heap boxing). `any View` type-erases into a dynamic existential container box with runtime vtable dispatch." },
-      { front: "How does a Swift `protocol` declare a generic placeholder type?", back: "Using the `associatedtype` keyword inside the protocol body, rather than angle brackets `<T>` on the protocol name." },
-      { front: "Difference between `try`, `try?`, and `try!` in Swift?", back: "`try` forwards or catches the error inside a `do/catch`; `try?` converts any thrown error into `nil` (returning an Optional); `try!` crashes at runtime if an error is thrown." }
-    ],
-    concepts: [
-      {
-        heading: "1. Protocol-Oriented Programming & Retroactive Extensions",
-        shift: "In Kotlin, only classes/objects can implement an `interface`, and you cannot make a third-party class implement your interface outside its declaration. In Swift, `struct`, `enum`, and `class` all conform to `protocol`s—and you can add protocol conformance to ANY existing type via `extension`!",
-        details: [
-          "<strong>Default Implementations via Protocol Extensions:</strong> Just like Kotlin interfaces can have default method bodies, Swift uses `extension MyProtocol { ... }` to provide shared default implementations to all conforming types.",
-          "<strong>Value Types + Protocols = No Fragile Base Class:</strong> Because `struct`s cannot inherit from classes, Swift architectures compose behavior through protocols (`Equatable`, `Hashable`, `Codable`, `Identifiable`, `Sendable`)."
-        ],
-        kotlinCode: `// Kotlin: Interfaces + Extension Functions
-interface Loggable {
-    val logTag: String
-    fun log(msg: String) = println("[$logTag] $msg")
-}
-
-// Cannot make kotlin.String implement Loggable directly!`,
-        swiftCode: `// Swift: Protocols + Retroactive Conformance via Extension
-protocol Loggable {
-    var logTag: String { get }
-    func log(_ msg: String)
-}
-
-extension Loggable {
-    func log(_ msg: String) { print("[\\(logTag)] \\(msg)") }
-}
-
-// Make Swift's built-in String conform to Loggable!
-extension String: Loggable {
-    var logTag: String { "StringLogger" }
-}`
-      },
-      {
-        heading: "2. Associated Types (`associatedtype`) & Primary Associated Types",
-        shift: "Kotlin uses generic type parameters on interfaces (`interface Store<T>`). Swift uses `associatedtype Element` inside the protocol, plus primary associated type syntax (`Store<String>`) for ergonomic constraints.",
-        details: [
-          "<strong>Why `associatedtype`?</strong> It lets the conforming type decide the concrete inner type (or infer it automatically from method signatures).",
-          "<strong>`where` Clauses:</strong> Swift lets you write rich generic constraints like `extension Collection where Element: Equatable`."
-        ],
-        kotlinCode: `interface DataStore<Value> {
-    suspend fun load(): Value?
-    suspend fun save(value: Value)
-}`,
-        swiftCode: `protocol DataStore<Value> {
-    associatedtype Value
-    func load() async -> Value?
-    func save(_ value: Value) async
-}
-
-struct UserStore: DataStore {
-    // Swift automatically infers Value == String!
-    func load() async -> String? { "Sudhakar" }
-    func save(_ value: String) async {}
-}`
-      },
-      {
-        heading: "3. Opaque Types (`some`) vs. Existential Types (`any`)",
-        shift: "This is the secret behind SwiftUI's performance. `some Protocol` means 'one specific concrete type known at compile time' (fast static dispatch, stack-allocated). `any Protocol` means 'a heterogeneous box that can hold any conforming type at runtime' (dynamic dispatch, potential heap allocation).",
-        details: [
-          "<strong>Why SwiftUI uses `var body: some View`:</strong> Every time a View's `body` is evaluated, it must return the exact same concrete type tree so SwiftUI can diff the layout in $O(1)$ without boxing views on the heap.",
-          "<strong>Swift 6 Explicit `any`:</strong> Swift 6 requires the `any` keyword whenever you use a protocol as a dynamic existential box (e.g., `var listeners: [any EventListener]`)."
-        ],
-        kotlinCode: `// Kotlin on JVM: All interfaces use reference pointers
-// and virtual method table (vtable/itable) dispatch.
-fun createFeedRepository(): Repository<Post> {
-    return NetworkPostRepository()
-}`,
-        swiftCode: `// 'some' = Opaque Type (Compile-time static dispatch, zero boxing!)
-func createFeedRepository() -> some DataStore<String> {
-    UserStore()
-}
-
-// 'any' = Existential Box (Runtime dynamic dispatch, allows mixed types)
-let stores: [any DataStore<String>] = [UserStore(), MockStore()]`
-      },
-      {
-        heading: "4. Explicit & Typed Error Handling (`throws`, `do/try/catch`, `try?`)",
-        shift: "Kotlin has unchecked exceptions (any function can throw without declaring it, so devs often wrap results in `Result<T>`). Swift uses compiler-checked `throws` (and Swift 6 Typed Throws `throws(AuthError)`) with zero stack-unwinding overhead!",
-        details: [
-          "<strong>How Swift `throws` Works Under the Hood:</strong> Swift doesn't unwind the call stack or capture expensive stack traces when throwing an `Error`. Instead, the compiler reserves a CPU register for the error value, making `throw` as fast as a normal `return`!",
-          "<strong>Bridging with `Result<Success, Failure>`:</strong> Swift also has a built-in `Result` enum when storing completion states outside async/throwing functions."
-        ],
-        kotlinCode: `// Kotlin: Unchecked exceptions or runCatching
-fun parseAge(raw: String): Result<Int> = runCatching {
-    raw.toInt().also { require(it >= 0) }
-}`,
-        swiftCode: `// Swift 6: Typed throws — fast as a return statement!
-enum ValidationError: Error {
-    case notANumber
-    case negativeAge(Int)
-}
-
-func parseAge(_ raw: String) throws(ValidationError) -> Int {
-    guard let age = Int(raw) else { throw .notANumber }
-    guard age >= 0 else { throw .negativeAge(age) }
-    return age
-}
-
-// Call site options:
-let optionalAge: Int? = try? parseAge("28") // Converts error to nil`
-      }
-    ],
-    quiz: [
-      {
-        question: "1. What is the difference between `func makeView() -> some View` and `func makeView() -> any View` in Swift?",
-        options: [
-          "`some View` returns an Optional, while `any View` is non-null",
-          "`some View` guarantees a single concrete return type fixed at compile time (static dispatch), while `any View` boxes the value in a dynamic existential container",
-          "`any View` is faster at runtime than `some View`",
-          "They are 100% identical aliases"
-        ],
-        correctIndex: 1,
-        explanation: "`some` (Opaque Type) lets the compiler know the exact concrete type behind the scenes for static optimization, whereas `any` creates a runtime existential box."
-      },
-      {
-        question: "2. How do you declare a generic placeholder type inside a Swift `protocol`?",
-        options: [
-          "`protocol Container<T> { ... }` without any inner declaration",
-          "Using `associatedtype Item` inside the protocol body",
-          "Using `typealias Item = Any`",
-          "Protocols in Swift cannot be generic"
-        ],
-        correctIndex: 1,
-        explanation: "Swift protocols declare generic placeholders using `associatedtype` (and can optionally expose them as primary associated types via `protocol Container<Item>`)."
-      },
-      {
-        question: "3. Why is throwing an `Error` in Swift (`throw MyError.failed`) dramatically cheaper at runtime than throwing an `Exception` in Java/Kotlin?",
-        options: [
-          "Because Swift ignores errors in Release builds",
-          "Because Swift does not capture a full call-stack trace or perform expensive stack unwinding; it passes the error value back via a dedicated CPU register",
-          "Because Swift errors are strings",
-          "Because ARC deletes the error immediately"
-        ],
-        correctIndex: 1,
-        explanation: "In Java/Kotlin, constructing a `Throwable` walks the stack to capture a stack trace and unwinds frames. In Swift, `throws` is compiled into a hidden return branch using a CPU register."
-      },
-      {
-        question: "4. What happens if a function declared as `func fetch() throws -> String` fails when called with `let data = try? fetch()`?",
-        options: [
-          "The app crashes immediately",
-          "`data` is assigned `nil` (of type `String?`) and no `do/catch` block is needed",
-          "The error is rethrown to the caller",
-          "It retries 3 times automatically"
-        ],
-        correctIndex: 1,
-        explanation: "`try?` suppresses any thrown error and evaluates the expression to an `Optional` (`nil` on failure, `.some(value)` on success)."
-      },
-      {
-        question: "5. How do you provide a default method implementation for a Swift `protocol` (similar to a default method body in a Kotlin `interface`)?",
-        options: [
-          "Write the body directly inside the `protocol { ... }` declaration",
-          "Create a protocol extension: `extension MyProtocol { func myMethod() { ... } }`",
-          "Use an `abstract class` instead",
-          "Mark the protocol with `@DefaultImpl`"
-        ],
-        correctIndex: 1,
-        explanation: "In Swift, protocol declarations only list requirements; default implementations are provided inside an `extension MyProtocol { ... }` block."
-      },
-      {
-        question: "6. How do you restrict a protocol so that ONLY `class` (reference) types can conform to it (needed when storing a `weak var delegate: MyDelegate?`)?",
-        options: [
-          "`protocol MyDelegate: AnyObject`",
-          "`protocol MyDelegate: StructOnly`",
-          "`class protocol MyDelegate`",
-          "`@ReferenceOnly protocol MyDelegate`"
-        ],
-        correctIndex: 0,
-        explanation: "Conforming a protocol to `AnyObject` (`protocol MyDelegate: AnyObject`) restricts conformance to reference types (`class` / `actor`), enabling `weak var delegate: (any MyDelegate)?`."
-      },
-      {
-        question: "7. What does `extension Array where Element: Numeric { func sum() -> Element { ... } }` demonstrate?",
-        options: [
-          "A Conditional Extension that adds `sum()` only to arrays whose elements conform to `Numeric`",
-          "Subclassing `Array` on the heap",
-          "Runtime reflection",
-          "Overriding the Garbage Collector"
-        ],
-        correctIndex: 0,
-        explanation: "Swift's `where` clause on extensions lets you conditionally add methods or protocol conformances only when generic type parameters meet specific constraints."
-      },
-      {
-        question: "8. When you synthesize `struct User: Equatable, Hashable, Codable`, when is the implementation generated?",
-        options: [
-          "At runtime using reflection (like `Gson` in Android)",
-          "At compile time by the Swift compiler (zero runtime reflection overhead, just like `kotlinx.serialization`)",
-          "By an external Gradle annotation processor (KAPT)",
-          "It is not generated; you must write `equals` and `hashCode` manually"
-        ],
-        correctIndex: 1,
-        explanation: "As long as all stored properties of a `struct` or `enum` conform to `Equatable`, `Hashable`, or `Codable`, the Swift compiler synthesizes the conformance at compile time with zero reflection."
-      },
-      {
-        question: "9. Why does the following function fail to compile? `func makeShape(isCircle: Bool) -> some Shape { if isCircle { return Circle() } else { return Square() } }`",
-        options: [
-          "Because `some Shape` requires every return branch to return the EXACT same concrete underlying type",
-          "Because `Shape` is a class",
-          "Because `if/else` is not allowed in functions returning protocols",
-          "Because `Circle` and `Square` are value types"
-        ],
-        correctIndex: 0,
-        explanation: "An opaque return type (`some Shape`) promises the compiler a single fixed concrete type. Returning `Circle` in one branch and `Square` in another violates that contract (unless wrapped in `@ViewBuilder` or erased with `any Shape`)."
-      },
-      {
-        question: "10. What does Swift 6's `throws(NetworkError)` syntax provide over traditional `throws`?",
-        options: [
-          "It catches errors on a background thread",
-          "Typed Throws: the compiler guarantees only `NetworkError` can be thrown, so `catch` blocks get an exhaustive `error: NetworkError` instead of an untyped `any Error`",
-          "It disables ARC during error handling",
-          "It converts errors to JSON automatically"
-        ],
-        correctIndex: 1,
-        explanation: "Introduced in Swift 6, Typed Throws (`throws(SpecificError)`) lets callers exhaustively switch over the exact error type in `catch` without needing a catch-all branch."
-      }
-    ],
-    codeChallenge: {
-      instructions: "Complete the Week 2 Lab: (1) Declare `protocol Cacheable` with `var cacheKey: String { get }`, (2) Provide a default `extension Cacheable`, and (3) Mark `decodeItem` with `throws -> String`.",
-      starterCode: `// TODO 1: Add 'var cacheKey: String { get }' inside Cacheable
-protocol Cacheable {
-    
-}
-
-// TODO 2: Add an extension on Cacheable with a default method
-extension Cacheable {
-    func printKey() { print(cacheKey) }
-}
-
-// TODO 3: Mark decodeItem with 'throws' before '-> String'
-func decodeItem(raw: String) -> String {
-    return raw
-}`,
-      solutionCode: `protocol Cacheable {
-    var cacheKey: String { get }
-}
-
-extension Cacheable {
-    func printKey() { print(cacheKey) }
-}
-
-func decodeItem(raw: String) throws -> String {
-    return raw
-}`,
-      simulatedOutput: `✓ Protocol Cacheable & default extension compiled!
-✓ decodeItem(raw:) statically verified with 'throws -> String'`,
-      requiredTokens: ["var cacheKey: String { get }", "extension Cacheable", "throws -> String"]
-    },
-    linkedinPost: `Week 2 of Android -> iOS Before New Year! 🚀
-This week I dove deep into Protocol-Oriented Programming, Opaque Types (some vs any), and Swift's Zero-Cost Error Handling (throws / try?).
-
-3 things that blew my mind coming from Kotlin:
-1️⃣ Retroactive Conformance: You can make built-in types like String or Array conform to your own protocol via an 'extension'!
-2️⃣ 'some' vs 'any': Why every SwiftUI view returns 'some View' (compile-time static dispatch with zero heap boxing) instead of 'any View'.
-3️⃣ Zero-Cost 'throws': Throwing an Error in Swift doesn't unwind the stack or capture an expensive stack trace like Java/Kotlin Exceptions—it uses a CPU register!
-
-📖 Interactive Week 2 Tutorial + Static vs Dynamic Dispatch Explorer + 10-Question Quiz:
-🔗 https://sudhakar-r08.github.io/ios-for-android-devs/
-
-#AndroidDev #iOSDev #Kotlin #Swift #SwiftUI #MobileArchitecture`,
-    linkedinArticle: `# Week 2: Protocol-Oriented Programming, \`some\` vs \`any\`, and Why Swift Errors Don't Unwind the Stack
-
-In Kotlin, we use \`interface\` for polymorphism and \`Result<T>\` or unchecked exceptions for failures. In Week 2 of my Android-to-iOS journey, I learned why Apple calls Swift a **Protocol-Oriented Language**—and how \`some\`, \`any\`, and \`throws\` work under the hood.
+Swift uses \`let\` for constants. And string interpolation uses \`\\(expression)\`, which easily accepts full operations like \`\"Next year: \\(age + 1)\"\`.
 
 ---
 
-## 1. Protocols & Retroactive Modeling
+## 2. Argument Labels: Why Swift Functions Read Like Sentences
 
-In Swift, \`struct\`s cannot inherit from other structs. Instead, polymorphism is achieved through **Protocols**. Even better: you can make *any* existing type (including types from Apple's standard library) conform to your own protocol using an \`extension\`:
+In Kotlin, parameter names are fixed unless callers choose to write named arguments. In Swift, every parameter can have an **external label** (seen at the call site) and an **internal name** (used inside the function body):
 
 \`\`\`swift
-protocol IdentifiableEntity {
-    var entityId: String { get }
+func transfer(amount: Double, from source: Account, to destination: Account) {
+    source.balance -= amount
+    destination.balance += amount
 }
 
-extension String: IdentifiableEntity {
-    var entityId: String { self }
-}
+// Call site reads like a sentence:
+transfer(amount: 100.0, from: checking, to: savings)
 \`\`\`
 
 ---
 
-## 2. \`some Protocol\` (Opaque) vs. \`any Protocol\` (Existential)
+## 3. The "Golden Path" with \`guard let\`
 
-When an Android developer sees \`var body: some View\` in SwiftUI, the natural question is: *"Why the word \`some\`?"*
+In Kotlin, we often use the Elvis operator \`?: return\` for early exits:
+\`\`\`kotlin
+val user = repo.getUser() ?: return
+\`\`\`
 
-- **\`any View\` (Existential Box):** Can hold a \`Text\` now and a \`Button\` 5 seconds later. Because the concrete size varies, Swift must box it in an Existential Container and use dynamic dispatch.
-- **\`some View\` (Opaque Type):** Hides the concrete type from the caller, **but guarantees to the compiler that the function always returns the exact same concrete type**. That gives SwiftUI 100% static dispatch and inline memory layout!
+Swift elevates this into a first-class language feature called \`guard let\`:
+\`\`\`swift
+guard let user = repo.getUser() else {
+    print("User not found")
+    return
+}
+// 'user' is now unwrapped and in scope for the rest of the function!
+\`\`\`
 
 ---
 
-## 3. Why \`throws\` in Swift Has Zero Exception Overhead
+**Next Week (Week 2):** Protocol-Oriented Programming (Kotlin \`interface\` vs Swift \`protocol\`), Extensions, and Error Handling with \`try/catch\`.`
+  },
 
-In Java/Kotlin, throwing an exception walks the call stack to build a stack trace. In Swift, \`throws\` is compiled into a standard branching return using a dedicated CPU register—making error handling as fast as returning an \`Optional\`, with full compile-time exhaustiveness via Swift 6 Typed Throws (\`throws(ApiError)\`).`
+  // ==========================================================================
+  // WEEK 2: PROTOCOLS, EXTENSIONS & ERROR HANDLING
+  // ==========================================================================
+  {
+    week: 2,
+    dates: "Oct 27 – Nov 02",
+    title: "Protocols, Extensions & Error Handling",
+    subtitle: "Understanding Protocol-Oriented Programming (`protocol` vs Kotlin `interface`), retroactive extensions, opaque types (`some View`), and `do / try / catch`.",
+    androidAnchor: "Kotlin `interface`, Extension Functions, Generics `<T>`, Unchecked Exceptions / `runCatching`",
+    iosAnchor: "Swift `protocol`, Protocol Extensions, `some` (Opaque) vs `any`, `throws` & `do / try / catch`",
+    simulatorType: "dispatch-explorer",
+    flashcards: [
+      { front: "What is the Swift equivalent of a Kotlin `interface`?", back: "`protocol`. Structs, classes, and enums can all conform to protocols." },
+      { front: "What is Retroactive Conformance in Swift?", back: "Using an `extension` to make an existing type (even Apple's built-in `String` or `Int`) conform to a protocol without modifying the original source code." },
+      { front: "What does `var body: some View` mean in SwiftUI?", back: "It returns an Opaque Type: a specific concrete type known to the compiler for static performance, without forcing you to write complex nested generic types." },
+      { front: "How does Swift error handling differ from Kotlin/Java exceptions?", back: "Kotlin has unchecked exceptions. Swift functions must declare `throws`, and callers must explicitly use `try`, `try?`, or `do/catch` at the call site." }
+    ],
+    dailySteps: [
+      {
+        day: 1,
+        title: "Protocols as Interfaces + Default Implementations",
+        time: "15 mins",
+        goal: "Define protocols and provide shared default behavior using protocol extensions.",
+        shift: "Kotlin interfaces have method bodies inside the interface; Swift protocols only declare requirements, and extensions provide default implementations.",
+        details: [
+          "<strong>Protocol Declaration:</strong> `protocol Identifiable { var id: String { get } }`.",
+          "<strong>Default Behavior:</strong> `extension Identifiable { func printId() { print(id) } }` provides the implementation to every conforming type."
+        ],
+        kotlinCode: `interface Greetable {
+    val name: String
+    fun greet() = println("Hello, $name!")
+}`,
+        swiftCode: `protocol Greetable {
+    var name: String { get }
+    func greet()
+}
+
+extension Greetable {
+    func greet() {
+        print("Hello, \\(name)!")
+    }
+}`
+      },
+      {
+        day: 2,
+        title: "Retroactive Modeling via Extensions",
+        time: "15 mins",
+        goal: "Add new methods and protocol conformances to existing types without subclassing.",
+        shift: "In Kotlin, extension functions cannot make an existing class implement a new interface. In Swift, extensions CAN make any type conform to a protocol!",
+        details: [
+          "<strong>Retroactive Conformance:</strong> `extension String: Greetable { var name: String { self } }`. Now `String` is officially `Greetable` across your app!"
+        ],
+        kotlinCode: `// Kotlin extension function (adds method, but does NOT make String implement an interface)
+fun String.shout() = this.uppercase() + "!"`,
+        swiftCode: `// Swift extension: can add methods AND protocol conformances!
+extension String {
+    func shout() -> String {
+        self.uppercased() + "!"
+    }
+}`
+      },
+      {
+        day: 3,
+        title: "Opaque Types (`some`) vs Existential Boxes (`any`)",
+        shift: "Understanding why every SwiftUI view has `var body: some View`.",
+        time: "15 mins",
+        goal: "Demystify the `some` keyword in Swift for Jetpack Compose developers.",
+        details: [
+          "<strong>`some View`:</strong> Promises the compiler that this function will always return ONE consistent concrete type, enabling compile-time static optimization without heap boxing.",
+          "<strong>`any View`:</strong> A runtime box that can hold any view dynamically (slower, used only when dynamic switching is strictly required)."
+        ],
+        kotlinCode: `// Compose: Composable functions emit UI directly
+@Composable
+fun Header() {
+    Text("Welcome")
+}`,
+        swiftCode: `// SwiftUI: View struct returns 'some View'
+struct Header: View {
+    var body: some View {
+        Text("Welcome")
+    }
+}`
+      },
+      {
+        day: 4,
+        title: "Explicit Error Handling (`throws`, `try`, `try?`)",
+        time: "15 mins",
+        goal: "Handle errors reliably without unexpected runtime crashes.",
+        shift: "Kotlin uses unchecked exceptions or `runCatching`. Swift enforces explicit `try` at every call site that can throw.",
+        details: [
+          "<strong>`try?`:</strong> Turns any thrown error into `nil`, returning an Optional. Great for non-critical operations like parsing an int from a string.",
+          "<strong>`do / catch`:</strong> Used when you need to inspect and handle specific errors."
+        ],
+        kotlinCode: `val age = runCatching { input.toInt() }.getOrNull()`,
+        swiftCode: `func parseAge(_ text: String) throws -> Int {
+    guard let age = Int(text) else { throw ValidationError.invalidNumber }
+    return age
+}
+
+// Convert error to Optional nil:
+let age = try? parseAge("25")`
+      },
+      {
+        day: 5,
+        title: "Week 2 Lab, Confidence Quiz & LinkedIn Post",
+        time: "20 mins",
+        goal: "Solidify protocol-oriented programming, test your knowledge, and publish Week 2 on LinkedIn.",
+        shift: "Recognize how Protocol-Oriented Programming replaces deep class hierarchies with clean composition.",
+        details: [
+          "Complete the Week 2 practice challenge, take the quiz, and copy the weekly LinkedIn reflection."
+        ],
+        kotlinCode: `interface Repository<T> {
+    suspend fun get(): T
+}`,
+        swiftCode: `protocol Repository {
+    associatedtype Item
+    func get() async throws -> Item
+}`
+      }
+    ],
+    concepts: [
+      {
+        heading: "1. Protocols & Protocol Extensions",
+        shift: "Swift protocols define requirements; protocol extensions provide default implementations.",
+        details: [
+          "Structs, enums, and classes can all conform to protocols.",
+          "Composition over inheritance: build rich features by combining small protocols."
+        ],
+        kotlinCode: `interface Printable {
+    fun printContent() = println("Content")
+}`,
+        swiftCode: `protocol Printable {
+    func printContent()
+}
+extension Printable {
+    func printContent() { print("Content") }
+}`
+      },
+      {
+        heading: "2. Retroactive Conformance via Extensions",
+        shift: "Extensions in Swift can make third-party or standard library types conform to your custom protocols.",
+        details: [
+          "No need to write wrapper classes just to make a type fit an interface."
+        ],
+        kotlinCode: `fun Int.isEven(): Boolean = this % 2 == 0`,
+        swiftCode: `extension Int {
+    var isEven: Bool { self % 2 == 0 }
+}`
+      },
+      {
+        heading: "3. Opaque Types (`some`) vs Dynamic Boxes (`any`)",
+        shift: "`some` gives compile-time static dispatch and zero heap boxing; `any` creates a dynamic runtime existential container.",
+        details: [
+          "SwiftUI uses `some View` to optimize complex nested view trees."
+        ],
+        kotlinCode: `fun createView(): View = MyView()`,
+        swiftCode: `func createView() -> some View = MyView()`
+      },
+      {
+        heading: "4. Checked Error Handling with `throws` and `try?`",
+        shift: "Errors in Swift are compiler-checked and do not incur expensive stack unwinding overhead.",
+        details: [
+          "Use `try?` when you only care whether the operation succeeded or failed.",
+          "Use `do/catch` when you need to show error messages to the user."
+        ],
+        kotlinCode: `try { api.fetch() } catch (e: Exception) { println(e) }`,
+        swiftCode: `do { try api.fetch() } catch { print(error) }`
+      }
+    ],
+    quiz: [
+      {
+        question: "1. What keyword defines an interface equivalent in Swift?",
+        options: ["`interface`", "`protocol`", "`trait`", "`contract`"],
+        correctIndex: 1,
+        explanation: "Swift uses `protocol` to define a blueprint of methods, properties, and other requirements."
+      },
+      {
+        question: "2. How do you provide a default implementation for a Swift protocol?",
+        options: [
+          "Write the code inside the protocol declaration",
+          "Create a protocol extension: `extension MyProtocol { ... }`",
+          "Subclass `NSObject`",
+          "Protocols cannot have default implementations"
+        ],
+        correctIndex: 1,
+        explanation: "Protocol extensions provide shared default implementations for conforming types."
+      },
+      {
+        question: "3. What does `some View` mean in SwiftUI's `var body: some View`?",
+        options: [
+          "It returns an optional View",
+          "It returns an opaque type: a specific concrete View known to the compiler for high-performance static dispatch",
+          "It returns any random View at runtime",
+          "It is a legacy Objective-C macro"
+        ],
+        correctIndex: 1,
+        explanation: "`some View` is an opaque return type that preserves static typing without exposing massive nested generic signatures."
+      },
+      {
+        question: "4. What does `try? parseData()` return if `parseData()` throws an error?",
+        options: [
+          "It crashes the application",
+          "`nil` (of type `Optional`)",
+          "A default empty object",
+          "It rethrows the error"
+        ],
+        correctIndex: 1,
+        explanation: "`try?` evaluates a throwing expression to an Optional, returning `nil` if an error was thrown."
+      },
+      {
+        question: "5. What is retroactive conformance in Swift?",
+        options: [
+          "A tool for migrating legacy Objective-C code",
+          "Using an `extension` to make an existing type conform to a protocol without changing its original source code",
+          "A way to reset variable state",
+          "An ARC memory optimization"
+        ],
+        correctIndex: 1,
+        explanation: "Retroactive modeling lets you extend types you don't own (like Apple's `String`) to conform to your own protocols."
+      },
+      {
+        question: "6. What is the fundamental difference between `some Protocol` and `any Protocol` in Swift 5.7+ / 6?",
+        options: [
+          "`some` is for classes; `any` is for structs",
+          "`some` provides static dispatch with zero heap boxing overhead; `any` creates a dynamic existential box with runtime method lookup",
+          "`some` is deprecated in iOS 17",
+          "There is no difference; they are interchangeable aliases"
+        ],
+        correctIndex: 1,
+        explanation: "`some` is an opaque type resolved statically by the compiler (blazing fast). `any` is an existential container with dynamic dispatch and heap box overhead."
+      },
+      {
+        question: "7. Can a Swift `struct` or `class` conform to multiple protocols simultaneously?",
+        options: [
+          "No, Swift strictly allows single protocol conformance",
+          "Yes, by listing them comma-separated (e.g., `struct User: Identifiable, Codable, Equatable`)",
+          "Only if they inherit from `NSObject`",
+          "Only classes can conform to multiple protocols; structs cannot"
+        ],
+        correctIndex: 1,
+        explanation: "Types can conform to any number of protocols separated by commas, encouraging compositional architecture."
+      },
+      {
+        question: "8. How does Swift's `defer` statement behave when an error is thrown or a function returns early?",
+        options: [
+          "It is skipped entirely if an error occurs",
+          "It always executes right before leaving the current scope, regardless of whether execution succeeded, returned early, or threw an error",
+          "It pauses execution for 1 second",
+          "It defers execution to the background thread"
+        ],
+        correctIndex: 1,
+        explanation: "`defer` acts like Kotlin/Java's `finally` block: it guarantees execution immediately before exiting the enclosing scope."
+      },
+      {
+        question: "9. What happens if a function marked `throws` calls another throwing function without prefixing it with `try`?",
+        options: [
+          "It automatically catches the error and prints it",
+          "It compiles with a runtime warning",
+          "It is a compile-time error; Swift strictly requires `try`, `try?`, or `try!` at every throwing call site",
+          "It silently ignores the error"
+        ],
+        correctIndex: 2,
+        explanation: "Swift mandates explicit error visibility. You must write `try` before any function call that can throw."
+      },
+      {
+        question: "10. How do you create a custom error type in Swift?",
+        options: [
+          "Subclass `Exception` or `Throwable`",
+          "Create an `enum` or `struct` that conforms to the built-in `Error` protocol",
+          "Annotate a class with `@Throws`",
+          "Import the `CrashReporting` module"
+        ],
+        correctIndex: 1,
+        explanation: "Swift errors are lightweight types conforming to the `Error` protocol, most idiomatically implemented as enums with associated values."
+      }
+    ],
+    codeChallenge: {
+      instructions: "Complete the Week 2 Lab: (1) Define `protocol Describable` with `var descriptionText: String { get }`, and (2) Provide a default `extension Describable`.",
+      starterCode: `// TODO 1: Declare protocol Describable
+protocol Describable {
+    
+}
+
+// TODO 2: Add extension Describable with default func printDescription()
+extension Describable {
+    
+}`,
+      solutionCode: `protocol Describable {
+    var descriptionText: String { get }
+}
+
+extension Describable {
+    func printDescription() {
+        print(descriptionText)
+    }
+}`,
+      simulatedOutput: `✓ Protocol Describable & default extension compiled cleanly!`,
+      requiredTokens: ["protocol Describable", "var descriptionText: String { get }", "extension Describable"]
+    },
+    linkedinPost: `Week 2 of Android -> iOS Before New Year! 🚀
+This week I dove into Protocol-Oriented Programming (POP), Extensions, and Swift's Error Handling.
+
+Coming from Kotlin interfaces, two things stood out:
+1️⃣ Retroactive Conformance: You can make existing types (even built-in ones like String or Int) conform to your custom protocol via an extension!
+2️⃣ The magic of 'some View': Why every SwiftUI view uses an opaque return type for static dispatch performance.
+
+Next week: Building real UI with SwiftUI (mapping Jetpack Compose to SwiftUI)!
+
+🔗 Follow along on GitHub: https://github.com/sudhakar-r08/ios-for-android-devs
+🌐 Tutorial: https://sudhakar-r08.github.io/ios-for-android-devs/
+
+#AndroidDev #iOSDev #Swift #Kotlin #MobileEngineering`,
+    linkedinArticle: `# Week 2: Protocol-Oriented Programming, Extensions, and Why SwiftUI Uses \`some View\`
+
+In Kotlin, we use \`interface\` and inheritance. In Swift, Apple emphasizes **Protocol-Oriented Programming**. Here is how it compares to the Android ecosystem...`
   },
 
   // ==========================================================================
@@ -681,282 +802,324 @@ In Java/Kotlin, throwing an exception walks the call stack to build a stack trac
   {
     week: 3,
     dates: "Nov 03 – Nov 09",
-    title: "SwiftUI Foundations & Layout Engine",
-    subtitle: "Mapping Jetpack Compose `@Composable` & `Modifier` Chains to SwiftUI `View` Structs, `@ViewBuilder`, and the 3-Step Layout Pass.",
-    androidAnchor: "`@Composable`, `Column`/`Row`/`Box`, `Modifier.padding().background()`, `Spacer(Modifier.weight(1f))`",
-    iosAnchor: "`View` struct (`var body: some View`), `VStack`/`HStack`/`ZStack`, Wrapper Modifiers, `Spacer()`, `@ViewBuilder`",
+    title: "SwiftUI Foundations (Compose ➔ SwiftUI)",
+    subtitle: "Your first real iOS UI: Mapping `@Composable` to `View` structs, Stacks (`VStack`, `HStack`, `ZStack`), and the Modifier wrapping order.",
+    androidAnchor: "`@Composable`, `Column`/`Row`/`Box`, `Modifier.padding().background()`, Compose Preview",
+    iosAnchor: "`View` struct (`var body: some View`), `VStack`/`HStack`/`ZStack`, Modifier order, `#Preview` Canvas",
     simulatorType: "modifier-sandbox",
     flashcards: [
-      { front: "What are the 3 steps of SwiftUI's Layout Negotiation Pass?", back: "1. Parent proposes a size to the child. 2. Child chooses its own size (parent MUST respect it!). 3. Parent places the child in the parent's coordinate space." },
-      { front: "Why does `.padding(16).background(.blue)` look different from `.background(.blue).padding(16)`?", back: "Every SwiftUI modifier wraps the previous view in a new modified View struct. Putting `.padding(16)` first expands the bounds before `.background(.blue)` paints behind it." },
-      { front: "How do you make a SwiftUI view expand to fill available width (like `Modifier.fillMaxWidth()` in Compose)?", back: "Use `.frame(maxWidth: .infinity)` (and optionally `alignment: .leading`)." },
-      { front: "What is `@ViewBuilder` in SwiftUI?", back: "A `@resultBuilder` attribute that lets closures (like `VStack { ... }` or `var body: some View`) combine multiple child views and `if/else`/`switch` statements into a single composite `TupleView` or `_ConditionalContent`." }
+      { front: "What is the SwiftUI equivalent of Jetpack Compose's `@Composable` function?", back: "A value-type `struct` conforming to the `View` protocol, implementing `var body: some View`." },
+      { front: "What are the SwiftUI equivalents of `Column`, `Row`, and `Box`?", back: "`VStack` (vertical), `HStack` (horizontal), and `ZStack` (depth/layered)." },
+      { front: "Why does `.padding(16).background(.blue)` differ from `.background(.blue).padding(16)`?", back: "Each modifier in SwiftUI wraps the preceding view in a new layout container. Padding first expands the frame before background paints it." },
+      { front: "How do you make a view expand to fill the available width (like `Modifier.fillMaxWidth()` in Compose)?", back: "Use `.frame(maxWidth: .infinity)` (with optional alignment like `alignment: .leading`)." }
     ],
-    concepts: [
+    dailySteps: [
       {
-        heading: "1. `@Composable` Functions vs. Lightweight `View` Structs",
-        shift: "In Jetpack Compose, UI components are `@Composable` functions emitted into a Slot Table. In SwiftUI, views are value-type `struct`s conforming to `View`. Creating a SwiftUI `View` struct is virtually free—it's just a blueprint stored on the stack!",
+        day: 1,
+        title: "From `@Composable` to `View` Structs & Previews",
+        time: "15 mins",
+        goal: "Build your first SwiftUI view and see it render live in the Xcode Preview Canvas.",
+        shift: "Compose views are functions emitted into a Slot Table; SwiftUI views are lightweight structs conforming to `View`.",
         details: [
-          "<strong>Views are Value Blueprints, Not UIKit `UIView`s:</strong> Never store heavy objects or execute side effects in a SwiftUI `View`'s `init()`. SwiftUI recreates your `View` struct frequently and diffs the resulting `body` tree.",
-          "<strong>`@ViewBuilder` Magic:</strong> Why can you put multiple views inside `VStack { Text(\"A\"); Text(\"B\") }` without a `return` keyword? Because `VStack`'s trailing closure is marked `@ViewBuilder`, a compile-time result builder."
+          "<strong>Lightweight Structs:</strong> Creating a SwiftUI View struct costs virtually nothing; it is just a declarative description of UI.",
+          "<strong>`#Preview`:</strong> Use the modern `#Preview` macro to see instant interactive previews in the Xcode Canvas (like `@Preview` in Compose)."
         ],
         kotlinCode: `@Composable
-fun ProfileCard(name: String, role: String) {
-    Column(
-        horizontalAlignment = Alignment.Start,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-            .background(Color.White, RoundedCornerShape(12.dp))
-    ) {
-        Text(text = name, fontWeight = FontWeight.Bold)
-        Text(text = role, color = Color.Gray)
-    }
-}`,
-        swiftCode: `struct ProfileCard: View {
-    let name: String
-    let role: String
+fun WelcomeCard() {
+    Text("Hello from Compose!")
+}
 
+@Preview
+@Composable
+fun WelcomePreview() { WelcomeCard() }`,
+        swiftCode: `struct WelcomeCard: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(name).fontWeight(.bold)
-            Text(role).foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(.background, in: RoundedRectangle(cornerRadius: 12))
-    }
-}`
-      },
-      {
-        heading: "2. The 3-Step Layout Negotiation & Modifier Wrapping Order",
-        shift: "Just like Jetpack Compose's single-pass measurement (`MeasurePolicy`), SwiftUI performs a 3-step layout pass: (1) Parent proposes size → (2) Child chooses its own size → (3) Parent positions child. And every modifier wraps the view before it in a new layout node!",
-        details: [
-          "<strong>No Forced Sizing:</strong> In SwiftUI, a parent cannot force a child view to be a certain size. `.frame(width: 200)` simply creates an invisible wrapper frame of width 200 and proposes 200 to the child.",
-          "<strong>`Spacer()` vs `Modifier.weight(1f)`:</strong> In SwiftUI, dropping a `Spacer()` inside an `HStack` or `VStack` greedily expands along the main axis, pushing siblings apart."
-        ],
-        kotlinCode: `// Compose: Modifier order matters!
-Text(
-    text = "Upgrade",
-    modifier = Modifier
-        .background(Color.Blue) // Paints tight box first
-        .padding(16.dp)         // Outer transparent margin!
-)`,
-        swiftCode: `// SwiftUI: Each modifier wraps the view above it!
-Text("Upgrade")
-    .padding(16)           // 1. Adds 16pt around Text
-    .background(.blue)     // 2. Paints full padded box blue
-    .clipShape(Capsule())  // 3. Clips blue box into a pill`
-      },
-      {
-        heading: "3. Custom ViewModifiers vs. Custom Compose Modifiers",
-        shift: "When you reuse a styling pattern across screens, you create a struct conforming to `ViewModifier` and expose it as a clean `.cardStyle()` extension on `View`.",
-        details: [
-          "<strong>Stateful ViewModifiers:</strong> Unlike simple Compose modifier chains, a SwiftUI `ViewModifier` is a struct that can even hold its own `@State` or `@Environment` properties!"
-        ],
-        kotlinCode: `fun Modifier.cardSurface(): Modifier = this
-    .padding(16.dp)
-    .clip(RoundedCornerShape(12.dp))`,
-        swiftCode: `struct CardSurface: ViewModifier {
-    func body(content: Content) -> some View {
-        content
-            .padding(16)
-            .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+        Text("Hello from SwiftUI!")
     }
 }
 
-extension View {
-    func cardSurface() -> some View { modifier(CardSurface()) }
+#Preview {
+    WelcomeCard()
 }`
+      },
+      {
+        day: 2,
+        title: "Layout Stacks: `VStack`, `HStack`, and `ZStack`",
+        time: "15 mins",
+        goal: "Arrange elements vertically, horizontally, and layered on top of each other.",
+        shift: "`Column` ➔ `VStack`, `Row` ➔ `HStack`, and `Box` ➔ `ZStack`.",
+        details: [
+          "<strong>Spacing & Alignment:</strong> `VStack(alignment: .leading, spacing: 12) { ... }` configures child alignment and gap spacing cleanly.",
+          "<strong>Layering with `ZStack`:</strong> `ZStack` layers child views back-to-front along the depth axis."
+        ],
+        kotlinCode: `Column(
+    horizontalAlignment = Alignment.Start,
+    verticalArrangement = Arrangement.spacedBy(8.dp)
+) {
+    Text("Title")
+    Text("Subtitle")
+}`,
+        swiftCode: `VStack(alignment: .leading, spacing: 8) {
+    Text("Title").fontWeight(.bold)
+    Text("Subtitle").foregroundStyle(.secondary)
+}`
+      },
+      {
+        day: 3,
+        title: "Modifiers & The Wrapping Order Trap",
+        time: "15 mins",
+        goal: "Understand why modifier order matters just as much in SwiftUI as it does in Compose.",
+        shift: "Each modifier wraps the previous view in a new modified view struct.",
+        details: [
+          "Chaining `.padding(16).background(.blue)` expands the box by 16pt first, then paints the entire box blue.",
+          "Chaining `.background(.blue).padding(16)` paints the tight text bounds blue first, then adds 16pt of transparent space around it!"
+        ],
+        kotlinCode: `Text(
+    text = "Button",
+    modifier = Modifier
+        .padding(16.dp)
+        .background(Color.Blue)
+)`,
+        swiftCode: `Text("Button")
+    .padding(16)
+    .background(.blue)
+    .clipShape(Capsule())`
+      },
+      {
+        day: 4,
+        title: "Flexible Layouts: `Spacer()` & `.frame(maxWidth: .infinity)`",
+        time: "15 mins",
+        goal: "Make views fill screen width and push siblings apart naturally.",
+        shift: "`Modifier.weight(1f)` ➔ `Spacer()`, `Modifier.fillMaxWidth()` ➔ `.frame(maxWidth: .infinity)`.",
+        details: [
+          "Dropping a `Spacer()` inside an `HStack` expands greedily along the horizontal axis, pushing surrounding items to the edges.",
+          "Use `.frame(maxWidth: .infinity, alignment: .leading)` to let cards expand across the entire screen width."
+        ],
+        kotlinCode: `Row(modifier = Modifier.fillMaxWidth()) {
+    Text("Left")
+    Spacer(modifier = Modifier.weight(1f))
+    Text("Right")
+}`,
+        swiftCode: `HStack {
+    Text("Left")
+    Spacer()
+    Text("Right")
+}
+.frame(maxWidth: .infinity)`
+      },
+      {
+        day: 5,
+        title: "Week 3 Mini-Project: Building a User Profile Card",
+        time: "25 mins",
+        goal: "Combine Stacks, Modifiers, Text, and Images to build a polished, production-ready Profile Card screen.",
+        shift: "Experience the joy of instant visual feedback in the Xcode Canvas Preview.",
+        details: [
+          "Assemble an avatar image, name, role badge, bio text, and action button.",
+          "Test your understanding with the quiz and share your first iOS screen on LinkedIn!"
+        ],
+        kotlinCode: `// Android Compose Profile Card
+@Composable
+fun ProfileCard() {
+    Card(modifier = Modifier.padding(16.dp)) {
+        Column { Text("Sudhakar"); Text("Android Dev") }
+    }
+}`,
+        swiftCode: `// SwiftUI Profile Card
+struct ProfileCard: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Sudhakar Raju").font(.title2).bold()
+            Text("Android Dev learning iOS").foregroundStyle(.secondary)
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .padding()
+    }
+}`
+      }
+    ],
+    concepts: [
+      {
+        heading: "1. `@Composable` Functions vs. `View` Structs",
+        shift: "Compose uses functions; SwiftUI uses lightweight value-type structs conforming to `View`.",
+        details: [
+          "Views are just blueprints that SwiftUI re-evaluates whenever state changes.",
+          "Use `#Preview` to get instant visual rendering in Xcode."
+        ],
+        kotlinCode: `@Composable fun CardView() { Text("Hello") }`,
+        swiftCode: `struct CardView: View { var body: some View { Text("Hello") } }`
+      },
+      {
+        heading: "2. Layout Stacks (`VStack`, `HStack`, `ZStack`)",
+        shift: "Direct 1:1 translation: `Column` ➔ `VStack`, `Row` ➔ `HStack`, `Box` ➔ `ZStack`.",
+        details: [
+          "Stacks support spacing and alignment out of the box."
+        ],
+        kotlinCode: `Column { Text("1"); Text("2") }`,
+        swiftCode: `VStack { Text("1"); Text("2") }`
+      },
+      {
+        heading: "3. Modifier Order & Wrapping",
+        shift: "Modifiers in SwiftUI wrap views hierarchically from top to bottom.",
+        details: [
+          "Always apply padding before background if you want the background to cover the padding area."
+        ],
+        kotlinCode: `Modifier.padding(16.dp).background(Color.Blue)`,
+        swiftCode: `.padding(16).background(.blue)`
+      },
+      {
+        heading: "4. Responsive Sizing with `Spacer` and `frame`",
+        shift: "Use `Spacer()` to push views apart, and `.frame(maxWidth: .infinity)` to fill width.",
+        details: [
+          "Parent proposes size, child chooses size, parent places child."
+        ],
+        kotlinCode: `Modifier.fillMaxWidth()`,
+        swiftCode: `.frame(maxWidth: .infinity)`
       }
     ],
     quiz: [
       {
-        question: "1. What is the difference between `.padding(16).background(.blue)` and `.background(.blue).padding(16)` on a `Text` view in SwiftUI?",
-        options: [
-          "They render identically because modifiers are order-independent",
-          "The first paints the 16pt padding area blue; the second paints only the tight text bounds blue and adds 16pt of uncolored space around it",
-          "The second one fails to compile",
-          "`.background` must always come before `.padding`"
-        ],
-        correctIndex: 1,
-        explanation: "Every modifier in SwiftUI wraps the view returned by the preceding modifier into a new View struct. Padding first expands the frame before the background is drawn."
+        question: "1. What is the SwiftUI equivalent of Jetpack Compose's `Column`?",
+        options: ["`VStack`", "`HStack`", "`ZStack`", "`FlowColumn`"],
+        correctIndex: 0,
+        explanation: "`VStack` (Vertical Stack) arranges child views in a vertical line."
       },
       {
-        question: "2. What is the SwiftUI equivalent of Jetpack Compose's `Modifier.fillMaxWidth()`?",
+        question: "2. What is the SwiftUI equivalent of Jetpack Compose's `Row`?",
+        options: ["`HStack`", "`VStack`", "`ZStack`", "`FlexRow`"],
+        correctIndex: 0,
+        explanation: "`HStack` (Horizontal Stack) arranges child views horizontally."
+      },
+      {
+        question: "3. What is the SwiftUI equivalent of Jetpack Compose's `Box` (layering views on top of each other)?",
+        options: ["`ZStack`", "`Overlay`", "`StackBox`", "`LayerStack`"],
+        correctIndex: 0,
+        explanation: "`ZStack` overlays child views back-to-front along the Z-axis."
+      },
+      {
+        question: "4. What happens when you write `Text(\"Hello\").background(.red).padding(20)`?",
         options: [
-          "`.fillMaxWidth()`",
+          "The red background covers the text and the 20pt padding",
+          "The red background covers only the tight text bounds, and 20pt of transparent space surrounds it",
+          "It is a compiler error",
+          "It crashes on iOS 17"
+        ],
+        correctIndex: 1,
+        explanation: "Modifiers wrap from top to bottom. Because `.background(.red)` was called before `.padding(20)`, only the inner text is red."
+      },
+      {
+        question: "5. How do you make a SwiftUI view expand to take the full available width of the screen?",
+        options: [
+          "`.width(100%)`",
           "`.frame(maxWidth: .infinity)`",
-          "`.layoutPriority(100)`",
-          "`.edgesIgnoringSafeArea(.all)`"
+          "`.fillParentWidth()`",
+          "`.expandWidth()`"
         ],
         correctIndex: 1,
-        explanation: "`.frame(maxWidth: .infinity)` creates a frame wrapper that accepts the parent's full proposed width."
+        explanation: "`.frame(maxWidth: .infinity)` tells the frame wrapper to accept the parent's full proposed width."
       },
       {
-        question: "3. During SwiftUI's 3-step layout pass, who has the final say on a child view's actual size?",
+        question: "6. Why are SwiftUI Views declared as `struct` rather than `class`?",
         options: [
-          "The parent container forces the child's width and height",
-          "The child view always chooses its own size based on the parent's proposal, and the parent must respect it",
-          "The `UIWindow` root controller",
-          "Auto Layout constraints override SwiftUI views"
+          "Because classes are not supported in iOS",
+          "Views are lightweight, ephemeral data descriptions; structs avoid heap allocation and enable super-fast diffing across renders",
+          "Structs can hold reference cycles, which SwiftUI requires",
+          "Classes cannot conform to `View`"
         ],
         correctIndex: 1,
-        explanation: "In SwiftUI, parents propose a size, the child chooses its own size, and the parent places the child."
+        explanation: "SwiftUI views are immutable blueprints, not retained UI components. Structs allocate on the stack and diff with virtually zero memory overhead."
       },
       {
-        question: "4. Which SwiftUI container corresponds to Jetpack Compose's `Box` (stacking children along the Z-axis)?",
+        question: "7. What is `@ViewBuilder` in SwiftUI?",
         options: [
-          "`VStack`",
-          "`HStack`",
-          "`ZStack`",
-          "`GridStack`"
-        ],
-        correctIndex: 2,
-        explanation: "`ZStack` overlays child views back-to-front along the depth (Z) axis, just like Compose's `Box`."
-      },
-      {
-        question: "5. What compiler feature allows you to list multiple child views inside `var body: some View` or `VStack { ... }` without commas or `return` statements?",
-        options: [
-          "`@ViewBuilder` (a Swift `@resultBuilder`)",
-          "Runtime bytecode weaving",
-          "Objective-C dynamic message passing",
-          "Macros from Foundation"
-        ],
-        correctIndex: 0,
-        explanation: "`@ViewBuilder` is a Swift `@resultBuilder` that transforms declarative child view statements into a strongly-typed composite `TupleView` at compile time."
-      },
-      {
-        question: "6. Why should you NEVER perform network requests or heavy allocations inside a SwiftUI `View`'s `init()`?",
-        options: [
-          "Because `struct`s cannot have `init()` methods in Swift",
-          "Because SwiftUI frequently re-instantiates lightweight `View` value structs whenever parent state changes; side effects belong in `.task {}` or `.onAppear {}`",
-          "Because `init()` runs on a background thread",
-          "Because Xcode blocks `init()` in Previews"
+          "A tool for converting XML layouts to Swift code",
+          "A result builder parameter attribute that allows combining multiple child views into a tuple without commas or return statements",
+          "A UIKit subclass for rendering storyboards",
+          "A third-party library for building responsive web pages"
         ],
         correctIndex: 1,
-        explanation: "A SwiftUI `View` struct is just an ephemeral description of UI, recreated many times during state updates. Side effects must be tied to lifecycle modifiers like `.task`."
+        explanation: "`@ViewBuilder` powers the trailing closures of `VStack`, `HStack`, etc., allowing clean DSL syntax similar to Jetpack Compose `@Composable` blocks."
       },
       {
-        question: "7. How do you push two views to opposite ends of an `HStack` in SwiftUI (like `Arrangement.SpaceBetween` in Compose)?",
+        question: "8. How does `Spacer()` distribute space inside an `HStack` or `VStack`?",
         options: [
-          "Place a `Spacer()` between the two views inside the `HStack`",
-          "Use `.padding(.infinity)`",
-          "Wrap them in a `ZStack`",
-          "Set `.alignment(.spaceBetween)`"
-        ],
-        correctIndex: 0,
-        explanation: "`Spacer()` flexibly expands along the main axis of an `HStack` or `VStack` to consume all remaining proposed space."
-      },
-      {
-        question: "8. What happens when two sibling views inside an `HStack` don't have enough horizontal space and you apply `.layoutPriority(1)` to the second view?",
-        options: [
-          "The second view renders on top of the first view",
-          "The `HStack` offers available space to the higher-priority view (`1`) first before allocating leftover space to the default-priority (`0`) view",
-          "The first view is deleted from the hierarchy",
-          "It changes the Z-index of the view"
+          "It reserves exactly 10pt of fixed whitespace",
+          "It expands greedily along the stack's primary axis to consume all remaining unallocated space",
+          "It forces child views to wrap onto the next line",
+          "It pushes the stack to the background thread"
         ],
         correctIndex: 1,
-        explanation: "`.layoutPriority(_:)` (similar to `Modifier.weight` priority in Compose) tells stacks which child should receive its ideal size first when space is constrained."
+        explanation: "`Spacer()` is flexible and greedily claims available space, pushing siblings apart along the stack's orientation axis."
       },
       {
-        question: "9. How do you overlay a badge in the top-trailing corner of an image in SwiftUI without wrapping both in a `ZStack`?",
+        question: "9. What is the three-step layout negotiation rule in SwiftUI?",
         options: [
-          "Use `.overlay(alignment: .topTrailing) { BadgeView() }`",
-          "Use `.background(BadgeView())`",
-          "Use `.offset(x: 999)`",
-          "Use `HStack`"
+          "1. Child measures itself, 2. Parent accepts or denies, 3. View renders",
+          "1. Parent proposes a size, 2. Child chooses its own size, 3. Parent places child in its coordinate system",
+          "1. Screen dimensions dictate size, 2. Subviews stretch to fit, 3. Redraw happens",
+          "1. AutoLayout constraints solve, 2. Frame calculates, 3. View displays"
         ],
-        correctIndex: 0,
-        explanation: "The `.overlay(alignment:content:)` modifier layers a secondary view directly over the modified view's bounds using the specified alignment."
+        correctIndex: 1,
+        explanation: "The SwiftUI layout cycle is always: Parent proposes -> Child decides its own size -> Parent positions the child."
       },
       {
-        question: "10. How do you create a reusable custom modifier in SwiftUI that can even hold its own `@State`?",
+        question: "10. What does the `#Preview` macro do in Xcode?",
         options: [
-          "Create a `struct` conforming to `ViewModifier` and implement `func body(content: Content) -> some View`",
-          "Subclass `UIView`",
-          "Write a global macro",
-          "Add a CSS stylesheet to the bundle"
+          "Generates an IPA file for TestFlight",
+          "Provides a live, interactive canvas preview in Xcode without launching the full device simulator",
+          "Compiles unit tests in background",
+          "Minifies code for production deployment"
         ],
-        correctIndex: 0,
-        explanation: "`ViewModifier` structs encapsulate modifier chains and can hold `@State`, `@Environment`, and custom parameters."
+        correctIndex: 1,
+        explanation: "`#Preview` (introduced in Swift 5.9 / Xcode 15) replaces the old `PreviewProvider` with a fast, macro-based live canvas preview."
       }
     ],
     codeChallenge: {
-      instructions: "Complete the `BadgeCard` SwiftUI View: (1) Conform `BadgeCard` to `View`, (2) Use an `HStack` with a `Spacer()` between the two `Text` views, and (3) Apply `.padding(16)` BEFORE `.background(.blue)`.",
-      starterCode: `// TODO: Conform BadgeCard to View, place Spacer() inside HStack,
-// and chain .padding(16) followed by .background(.blue)
-struct BadgeCard {
-    let title: String
+      instructions: "Complete the Week 3 Card: (1) Use an `HStack`, (2) Place a `Spacer()` between the two `Text` views, and (3) Apply `.padding(16)` before `.background(.blue)`.",
+      starterCode: `struct StatusCard: View {
     var body: some View {
-        HStack {
-            Text(title)
-            Text("PRO")
-        }
+        // TODO: HStack with Text("Online"), Spacer(), Text("Active")
+        // and .padding(16).background(.blue)
+        Text("Online")
     }
 }`,
-      solutionCode: `struct BadgeCard: View {
-    let title: String
+      solutionCode: `struct StatusCard: View {
     var body: some View {
         HStack {
-            Text(title)
+            Text("Online")
             Spacer()
-            Text("PRO")
+            Text("Active")
         }
         .padding(16)
         .background(.blue)
     }
 }`,
-      simulatedOutput: `✓ BadgeCard conforms to View
-✓ HStack layout: [Text(title)] <--- Spacer() ---> [Text("PRO")]
-✓ Modifier wrapper order verified: .padding(16) wrapped inside .background(.blue)`,
-      requiredTokens: [": View", "HStack", "Spacer()", ".padding(16)", ".background(.blue)"]
+      simulatedOutput: `✓ StatusCard layout: [Text("Online")] <--- Spacer() ---> [Text("Active")]
+✓ .padding(16) before .background(.blue) verified!`,
+      requiredTokens: ["HStack", "Spacer()", ".padding(16)", ".background(.blue)"]
     },
-    linkedinPost: `Week 3 of Android -> iOS Before New Year: Jetpack Compose vs SwiftUI Layout Engine! 🎨📐
+    linkedinPost: `Week 3 of Android -> iOS Before New Year: Jetpack Compose to SwiftUI! 🎨📱
 
-If you already know Jetpack Compose, you have a massive superpower learning SwiftUI—because both frameworks share the exact same declarative DNA:
+If you already know Jetpack Compose, learning SwiftUI feels like discovering an alternate reality version of your daily workflow:
 
-1️⃣ @Composable fun vs View Structs
-In Compose, views are functions emitted into a Slot Table. In SwiftUI, views are ultra-lightweight value-type structs conforming to the View protocol.
+1️⃣ @Composable fun -> View struct
+In Compose, UI is functions. In SwiftUI, views are ultra-lightweight structs conforming to the View protocol.
 
-2️⃣ The 3-Step Layout Negotiation Pass
-Parent proposes a size -> Child chooses its own size -> Parent places child. In SwiftUI, a parent can NEVER force a child's size!
+2️⃣ Column, Row, Box -> VStack, HStack, ZStack
+The layout containers map almost 1:1.
 
-3️⃣ Why Modifier Order Matters
-Just like Compose Modifiers, chaining .padding(16).background(.blue) wraps the padded box in blue, while reversing them leaves transparent padding outside the blue box!
+3️⃣ Modifier Order Matters
+Chaining .padding(16).background(.blue) expands the box first then paints it blue; reversing them paints only the tight text bounds blue!
 
-🎮 Try the live interactive SwiftUI Modifier Sandbox + 10-question quiz on my tutorial site:
-🔗 https://sudhakar-r08.github.io/ios-for-android-devs/
+This week I built my first polished SwiftUI profile card screen and previewed it live in Xcode Canvas.
+
+🔗 GitHub: https://github.com/sudhakar-r08/ios-for-android-devs
+🌐 Tutorial Site: https://sudhakar-r08.github.io/ios-for-android-devs/
 
 #AndroidDev #iOSDev #JetpackCompose #SwiftUI #MobileDevelopment`,
-    linkedinArticle: `# Week 3: Jetpack Compose vs. SwiftUI — Inside the 3-Step Layout Engine & Modifier Wrapping
+    linkedinArticle: `# Week 3: An Android Developer's Guide to SwiftUI Layouts
 
-Coming from Jetpack Compose, learning SwiftUI feels like meeting a sibling who grew up in a different house. Both frameworks replaced imperative XML/Storyboard trees with declarative state-driven UI. Yet the way SwiftUI encodes view trees in the Swift type system is fascinating.
-
----
-
-## 1. \`@Composable\` Functions vs. Value-Type \`View\` Structs
-
-In Jetpack Compose, the Kotlin compiler plugin rewrites \`@Composable\` functions to emit nodes into a gap-buffer Slot Table.
-In SwiftUI, views are **value-type \`struct\`s** that implement \`var body: some View\`. Because Swift structs are allocated on the stack, creating and destroying thousands of \`View\` structs costs virtually nothing.
-
----
-
-## 2. The 3-Step Layout Negotiation
-
-Whenever SwiftUI lays out a screen, every parent-child pair goes through a strict 3-step conversation:
-1. **Parent proposes a size** (e.g., \`390 × 844\`).
-2. **Child chooses its own size** (e.g., \`Text("Hi")\` measures its glyphs and says *"I only need 24 × 20"*).
-3. **Parent places the child** in its coordinate space (centered by default).
-
----
-
-## 3. Why Modifier Order Changes Everything
-
-Every modifier you call in SwiftUI wraps the previous struct in a new \`ModifiedContent<Child, Modifier>\` struct:
-- \`.padding(16).background(.blue)\` → Pads the view first, then paints the entire padded area blue.
-- \`.background(.blue).padding(16)\` → Paints the tight text box blue first, then adds 16pt of invisible padding around it.`
+Coming from Jetpack Compose, building UI with SwiftUI is intuitive and rewarding. Here is how Compose concepts translate directly into SwiftUI...`
   }
 ];

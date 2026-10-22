@@ -20,92 +20,126 @@ window.WEEKS_4_TO_6 = [
       { front: "How does Swift 5.9+ `@Observable` improve over legacy `ObservableObject` + `@Published`?", back: "`ObservableObject` invalidated every observing view whenever ANY `@Published` property changed. `@Observable` tracks property access at the individual field level—only views that actually read a mutated property re-evaluate their `body`!" },
       { front: "What is the SwiftUI equivalent of Jetpack Compose's `CompositionLocalProvider`?", back: "`@Environment` and the `.environment(...)` view modifier." }
     ],
-    concepts: [
+    dailySteps: [
       {
-        heading: "1. Ephemeral View State (`@State`) & Two-Way Hoisting (`@Binding`)",
-        shift: "In Jetpack Compose, `remember { mutableStateOf(...) }` persists state across recompositions, and state hoisting passes `(value, onValueChange)`. In SwiftUI, `@State` stores state in SwiftUI's attribute graph, and `$property` passes a two-way `Binding<Value>`!",
+        day: 1,
+        title: "Local State with @State (remember ➔ @State)",
+        time: "15 mins",
+        goal: "Understand why and how SwiftUI uses @State for local view variables.",
+        shift: "`var count by remember { mutableIntStateOf(0) }` ➔ `@State private var count = 0`.",
         details: [
-          "<strong>Always mark `@State` as `private`:</strong> `@State` is owned by the specific view that declares it. Child views should receive either a plain value (read-only) or a `@Binding` (read-write).",
-          "<strong>How `$` Works:</strong> `@State` is a Property Wrapper. Writing `count` accesses `wrappedValue` (`Int`), while writing `$count` accesses `projectedValue` (`Binding<Int>`)."
+          "Always declare `@State` properties as `private` because they belong to the view that created them.",
+          "Modifying a `@State` variable causes SwiftUI to automatically re-render the view's `body`."
         ],
         kotlinCode: `@Composable
-fun SearchScreen() {
-    var query by remember { mutableStateOf("") }
-    SearchBar(
-        query = query,
-        onQueryChange = { query = it }
-    )
+fun Counter() {
+    var count by remember { mutableIntStateOf(0) }
+    Button(onClick = { count++ }) { Text("Count: $count") }
 }`,
-        swiftCode: `struct SearchScreen: View {
-    @State private var query = ""
-
+        swiftCode: `struct Counter: View {
+    @State private var count = 0
     var body: some View {
-        // '$query' passes a two-way Binding<String>
-        SearchBar(query: $query)
-    }
-}
-
-struct SearchBar: View {
-    @Binding var query: String
-    var body: some View {
-        TextField("Search...", text: $query)
+        Button("Count: \\(count)") { count += 1 }
     }
 }`
       },
       {
-        heading: "2. Modern ViewModels with `@Observable` (Goodbye `ObservableObject`!)",
-        shift: "In legacy SwiftUI (iOS 13–16), ViewModels used `ObservableObject`, `@Published`, `@StateObject`, and `@ObservedObject`—and changing ONE property re-rendered every view observing that ViewModel! Modern Swift (iOS 17+ / Swift 6) uses the `@Observable` macro for automatic, fine-grained property tracking.",
+        day: 2,
+        title: "Two-Way Binding with $ and @Binding",
+        time: "15 mins",
+        goal: "Pass two-way mutable state to child components like TextField and Toggle.",
+        shift: "Compose passes `(value, onValueChange)`. SwiftUI passes `$text` (a `Binding<String>`).",
         details: [
-          "<strong>Zero `StateFlow` Boilerplate:</strong> You don't need private `_uiState` and public `uiState: StateFlow` backing fields. The `@Observable` macro rewrites stored properties into tracked getters/setters at compile time.",
-          "<strong>When to use `@Bindable`:</strong> If a view receives an `@Observable` object (via parameter or `@Environment`) and needs a `$` binding to one of its properties for a `TextField` or `Toggle`, mark the reference `@Bindable var vm: MyViewModel`."
+          "The `$` prefix accesses the `projectedValue` of `@State`, creating a two-way connection.",
+          "Child views receive this with the `@Binding` property wrapper."
         ],
-        kotlinCode: `class CheckoutViewModel : ViewModel() {
-    var couponCode by mutableStateOf("")
-    var total by mutableDoubleStateOf(99.0)
-    var isLoading by mutableStateOf(false)
+        kotlinCode: `TextField(value = text, onValueChange = { text = it })`,
+        swiftCode: `TextField("Enter name", text: $text)`
+      },
+      {
+        day: 3,
+        title: "Modern ViewModels with the @Observable Macro",
+        time: "15 mins",
+        goal: "Build clean, reactive ViewModels without StateFlow or LiveData boilerplate.",
+        shift: "Compose `ViewModel` + `StateFlow` ➔ Swift `@Observable class MyViewModel`.",
+        details: [
+          "Swift 5.9+ `@Observable` tracks which properties each view actually reads.",
+          "No manual `collectAsState()` required; simply read `viewModel.property` in `body`."
+        ],
+        kotlinCode: `class UserViewModel : ViewModel() {
+    val name = MutableStateFlow("Sudhakar")
 }`,
-        swiftCode: `import Observation
-
-@Observable
+        swiftCode: `@Observable
 @MainActor
-final class CheckoutViewModel {
-    var couponCode = ""
-    var total = 99.0
+final class UserViewModel {
+    var name = "Sudhakar"
+}`
+      },
+      {
+        day: 4,
+        title: "Tree-Scoped State with @Environment",
+        time: "15 mins",
+        goal: "Pass dependencies down the view hierarchy without drilling props through every child.",
+        shift: "Compose `CompositionLocalProvider` ➔ SwiftUI `.environment(...)` and `@Environment`.",
+        details: [
+          "Inject an object into the root view with `.environment(myObject)`.",
+          "Read it anywhere in the descendant tree with `@Environment(MyObject.self)`."
+        ],
+        kotlinCode: `val LocalUser = compositionLocalOf<User> { error("No user") }`,
+        swiftCode: `@Environment(UserSession.self) private var session`
+      },
+      {
+        day: 5,
+        title: "Week 4 Todo App Project, Quiz & LinkedIn Post",
+        time: "20 mins",
+        goal: "Build an interactive Todo list connected to an @Observable ViewModel.",
+        shift: "Experience how cleanly modern SwiftUI separates UI and ViewModel state.",
+        details: [
+          "Build a working interactive screen, complete the quiz, and share your takeaways on LinkedIn."
+        ],
+        kotlinCode: `// Combine ViewModel, State, and List in Compose`,
+        swiftCode: `// Combine @Observable, @State, and List in SwiftUI`
+      }
+    ],
+    concepts: [
+      {
+        heading: "1. Ephemeral View State (`@State`) & Two-Way Hoisting (`@Binding`)",
+        shift: "In Jetpack Compose, `remember { mutableStateOf(...) }` persists state across recompositions. In SwiftUI, `@State` stores state in SwiftUI's attribute graph, and `$property` passes a two-way `Binding<Value>`!",
+        details: [
+          "<strong>Always mark `@State` as `private`:</strong> `@State` is owned by the specific view that declares it.",
+          "<strong>How `$` Works:</strong> Writing `count` reads the value; writing `$count` passes a `Binding<Int>`."
+        ],
+        kotlinCode: `var query by remember { mutableStateOf("") }
+SearchBar(query = query, onQueryChange = { query = it })`,
+        swiftCode: `@State private var query = ""
+SearchBar(query: $query)`
+      },
+      {
+        heading: "2. Modern ViewModels with `@Observable` (Goodbye `ObservableObject`!)",
+        shift: "Swift 5.9+ uses the `@Observable` macro for automatic, fine-grained property tracking—eliminating `StateFlow` and `@Published` boilerplate.",
+        details: [
+          "<strong>Zero `StateFlow` Boilerplate:</strong> The macro rewrites stored properties into tracked getters/setters.",
+          "<strong>Use `@Bindable`:</strong> If you need two-way `$` bindings to an `@Observable` model's properties."
+        ],
+        kotlinCode: `class FeedViewModel : ViewModel() {
+    private val _items = MutableStateFlow<List<String>>(emptyList())
+    val items: StateFlow<List<String>> = _items
+}`,
+        swiftCode: `@Observable
+@MainActor
+final class FeedViewModel {
+    var items: [String] = []
     var isLoading = false
-}
-
-struct CheckoutView: View {
-    @State private var vm = CheckoutViewModel()
-
-    var body: some View {
-        @Bindable var vm = vm
-        VStack {
-            TextField("Coupon", text: $vm.couponCode)
-            Text("Total: $\\(vm.total)")
-        }
-    }
 }`
       },
       {
         heading: "3. View Identity (`id`) & Tree Scoping (`@Environment`)",
-        shift: "Just like `key()` and `CompositionLocal` in Compose, SwiftUI tracks view lifetime by structural position or explicit `.id(...)`, and injects dependencies down the tree via `.environment(...)`.",
+        shift: "Just like `key()` and `CompositionLocal` in Compose, SwiftUI tracks view lifetime by identity and injects dependencies via `.environment(...)`.",
         details: [
-          "<strong>Resetting `@State` with `.id()`:</strong> Changing a view's `.id(userId)` destroys its existing `@State` storage and initializes a fresh instance—critical when switching accounts or detail items!"
+          "<strong>Resetting State with `.id()`:</strong> Changing `.id(itemId)` destroys old state and initializes a fresh view."
         ],
-        kotlinCode: `val LocalTheme = compositionLocalOf { Theme.Dark }
-
-CompositionLocalProvider(LocalTheme provides Theme.Light) {
-    ChildScreen()
-}`,
-        swiftCode: `// Injecting an @Observable object into the SwiftUI Environment:
-ContentView()
-    .environment(sessionManager)
-
-// Reading it inside any descendant View:
-struct ChildScreen: View {
-    @Environment(SessionManager.self) private var session
-    var body: some View { Text(session.currentUser) }
-}`
+        kotlinCode: `CompositionLocalProvider(LocalTheme provides Theme.Light) { ChildScreen() }`,
+        swiftCode: `ContentView().environment(sessionManager)`
       }
     ],
     quiz: [
@@ -121,118 +155,115 @@ struct ChildScreen: View {
         explanation: "SwiftUI `View` structs are ephemeral value blueprints. `@State` allocates external heap storage tied to the view's identity so the value survives struct recreation."
       },
       {
-        question: "2. What is the biggest performance advantage of the `@Observable` macro (iOS 17+) over the older `ObservableObject` + `@Published` protocol?",
+        question: "2. What is the biggest advantage of the modern `@Observable` macro (iOS 17+) over legacy `ObservableObject`?",
         options: [
           "`@Observable` uses less disk space",
-          "`@Observable` tracks exactly which properties a View's `body` reads, so mutating an unread property does NOT trigger unnecessary view re-renders",
+          "`@Observable` tracks exactly which properties a View reads, so mutating an unread property never triggers unnecessary view re-renders",
           "`@Observable` converts classes into structs",
           "`@Observable` disables ARC"
         ],
         correctIndex: 1,
-        explanation: "With `ObservableObject`, changing *any* `@Published` property fired `objectWillChange`, invalidating every view observing that object. `@Observable` provides fine-grained per-property tracking."
+        explanation: "Fine-grained observation ensures that views only re-render when a property they actually read in their `body` changes."
       },
       {
-        question: "3. In a child view that receives a two-way reference to a parent's `@State private var isOn = false`, what property wrapper should the child use?",
+        question: "3. What does the `$` prefix (e.g. `$name`) produce when applied to a `@State` variable?",
         options: [
-          "`@State var isOn: Bool`",
-          "`@Binding var isOn: Bool`",
-          "`@Environment var isOn: Bool`",
-          "`@Query var isOn: Bool`"
+          "String interpolation like in Kotlin",
+          "A two-way `Binding<T>` projection allowing child controls to read and mutate the parent state",
+          "A background thread task",
+          "A constant value"
         ],
         correctIndex: 1,
-        explanation: "`@Binding` creates a two-way read/write connection to state owned by a parent view (passed via `$isOn`)."
+        explanation: "`$name` accesses the projected value of the property wrapper, producing a `Binding<String>` for two-way synchronization."
       },
       {
-        question: "4. When your view owns the lifecycle of an `@Observable` ViewModel class (similar to `viewModel()` in Compose), how should you declare it in the owning View?",
+        question: "4. Which SwiftUI mechanism is the direct equivalent of Compose's `CompositionLocalProvider`?",
         options: [
-          "`@State private var viewModel = MyViewModel()`",
-          "`@Binding var viewModel = MyViewModel()`",
-          "`weak var viewModel = MyViewModel()`",
-          "`let viewModel = MyViewModel()`"
-        ],
-        correctIndex: 0,
-        explanation: "With the modern `@Observable` macro, `@State private var viewModel = MyViewModel()` replaces the older `@StateObject`, ensuring SwiftUI keeps a single instance alive across view updates."
-      },
-      {
-        question: "5. When do you use the `@Bindable` property wrapper in SwiftUI?",
-        options: [
-          "When saving data to Core Data",
-          "When you have an `@Observable` object and need to create `$` two-way bindings (e.g., `$vm.searchText`) to its properties for controls like `TextField` or `Toggle`",
-          "When bridging Objective-C code",
-          "When declaring a constant `let`"
-        ],
-        correctIndex: 1,
-        explanation: "`@Bindable` wraps an `@Observable` object reference so you can use `$object.property` syntax to produce `Binding<Property>` values."
-      },
-      {
-        question: "6. What happens to a SwiftUI view's `@State` properties if you attach `.id(selectedItemId)` to the view and `selectedItemId` changes?",
-        options: [
-          "Nothing changes",
-          "SwiftUI treats the view as a brand-new identity, destroying its old `@State` storage and resetting all `@State` properties to their initial values",
-          "The app crashes",
-          "Only `@Environment` resets"
-        ],
-        correctIndex: 1,
-        explanation: "Explicit identity via `.id(_:)` controls the lifetime of a view's state in the attribute graph. Changing the ID tears down the old view state and mounts a fresh one."
-      },
-      {
-        question: "7. How do you prevent a specific property inside an `@Observable` class from triggering SwiftUI view updates when it changes (e.g., an internal analytics cache)?",
-        options: [
-          "Mark the property with `@ObservationIgnored`",
-          "Mark the property as `public`",
-          "Use `unowned`",
-          "Name the property with an underscore"
-        ],
-        correctIndex: 0,
-        explanation: "`@ObservationIgnored` tells the `@Observable` macro not to synthesize observation tracking for that property."
-      },
-      {
-        question: "8. Which SwiftUI mechanism is the direct counterpart to Jetpack Compose's `CompositionLocalProvider` for passing app-wide dependencies (like Theme or AuthSession) down the tree?",
-        options: [
-          "`@Environment` and `.environment(_:)`",
+          "`@Environment` and `.environment(...)`",
           "`@Binding`",
-          "`NotificationCenter`",
+          "`@State`",
           "`UserDefaults`"
         ],
         correctIndex: 0,
-        explanation: "`.environment(object)` injects an observable object or environment value into a subtree, and any descendant reads it via `@Environment`."
+        explanation: "`.environment(...)` passes dependencies down the view hierarchy, accessible anywhere below via `@Environment`."
       },
       {
-        question: "9. Why is creating an `@Observable` ViewModel as a plain `let vm = MyViewModel()` inside a SwiftUI `View` struct a critical bug?",
+        question: "5. When a SwiftUI View owns an `@Observable` ViewModel, how should you declare it in the view?",
         options: [
-          "`let` is not allowed in SwiftUI views",
-          "Every time the parent view re-renders, the `View` struct is re-initialized, creating a brand-new `MyViewModel()` and wiping out all state unless wrapped in `@State`",
-          "It causes an ARC retain cycle",
-          "It blocks the main thread"
+          "`@State private var vm = MyViewModel()`",
+          "`let vm = MyViewModel()`",
+          "`@Binding var vm = MyViewModel()`",
+          "`weak var vm = MyViewModel()`"
         ],
-        correctIndex: 1,
-        explanation: "Without `@State`, `let vm = MyViewModel()` runs on every struct re-instantiation, resetting your ViewModel every time a parent view updates!"
+        correctIndex: 0,
+        explanation: "`@State private var vm = MyViewModel()` keeps the single ViewModel instance alive across View struct recreations."
       },
       {
-        question: "10. In SwiftUI, why should avoided `if/else` branches be replaced by ternary expressions (e.g., `.opacity(isVisible ? 1 : 0)`) when animating a view's property?",
+        question: "6. What is the role of the `@Bindable` property wrapper when working with `@Observable` objects?",
         options: [
-          "`if/else` is not valid inside `@ViewBuilder`",
-          "`if/else` creates two distinct structural view identities (`_ConditionalContent`), destroying and recreating the view instead of smoothly interpolating the same view's attribute",
-          "Ternary operators run on the GPU",
-          "`if/else` leaks memory"
+          "It forces the class to conform to Codable",
+          "It creates two-way bindings (`$model.property`) to properties of an `@Observable` object passed into a child view",
+          "It binds a View to a background GCD queue",
+          "It replaces CoreData relationships"
         ],
         correctIndex: 1,
-        explanation: "In SwiftUI, `if/else` branches have separate structural identities (insertion/removal transitions), whereas modifying an attribute on a single view preserves its identity and animates smoothly."
+        explanation: "`@Bindable` allows you to create direct two-way bindings (like `$user.username`) to properties of an `@Observable` model object."
+      },
+      {
+        question: "7. Why should `@State` variables almost always be marked `private`?",
+        options: [
+          "Because Swift 6 compiler throws an error if they are public",
+          "Because `@State` is private internal view state owned exclusively by that view; external parents should pass parameters or bindings",
+          "Because private variables use less RAM",
+          "Because it prevents background threads from accessing them"
+        ],
+        correctIndex: 1,
+        explanation: "Marking `@State` as `private` enforces proper encapsulation and single source of truth: only the view that owns the state should mutate it directly."
+      },
+      {
+        question: "8. What does `@ObservationIgnored` do when placed on a property inside an `@Observable` class?",
+        options: [
+          "It excludes the property from JSON encoding",
+          "It tells SwiftUI not to track reads or writes of this property, preventing view invalidations when it changes",
+          "It makes the property private",
+          "It deletes the property from memory"
+        ],
+        correctIndex: 1,
+        explanation: "`@ObservationIgnored` opts a property out of SwiftUI observation tracking—ideal for caches, timers, or internal counters."
+      },
+      {
+        question: "9. In Jetpack Compose, state is retained across recompositions using `remember { mutableStateOf(...) }`. What is the SwiftUI equivalent?",
+        options: [
+          "`@State private var ...`",
+          "`var state = ...`",
+          "`@AppStorage var ...`",
+          "`@Transient var ...`"
+        ],
+        correctIndex: 0,
+        explanation: "`@State` is the SwiftUI equivalent of Compose's `remember { mutableStateOf(...) }`, persisting state through view renders."
+      },
+      {
+        question: "10. In a unidirectional data flow (UDF) architecture, how should a child view update a parent's state without direct mutation?",
+        options: [
+          "By accessing the parent's private variables via reflection",
+          "By accepting a `@Binding` or passing an action closure (e.g. `onDelete: () -> Void`) up to the parent",
+          "By sending a global broadcast notification",
+          "By creating a static singleton variable"
+        ],
+        correctIndex: 1,
+        explanation: "State hoisting via `@Binding` or action closures keeps child views stateless and reusable, matching Compose's event hoisting pattern."
       }
     ],
     codeChallenge: {
       instructions: "Complete the Week 4 State Lab: (1) Mark `ProfileViewModel` with `@Observable`, (2) Hold it with `@State private var vm` in `ProfileScreen`, and (3) Bind the `TextField` to `$vm.bio`.",
-      starterCode: `// TODO 1: Annotate ProfileViewModel with @Observable
-final class ProfileViewModel {
+      starterCode: `final class ProfileViewModel {
     var bio: String = ""
 }
 
 struct ProfileScreen: View {
-    // TODO 2: Use @State private var vm = ProfileViewModel()
     var vm = ProfileViewModel()
 
     var body: some View {
-        // TODO 3: Pass $vm.bio to TextField
         TextField("Bio", text: vm.bio)
     }
 }`,
@@ -253,40 +284,26 @@ struct ProfileScreen: View {
 ✓ $vm.bio projected Binding<String> connected to TextField!`,
       requiredTokens: ["@Observable", "@State", "$vm.bio"]
     },
-    linkedinPost: `Week 4 of Android -> iOS Before New Year: State Management & @Observable! ⚡🧠
+    linkedinPost: `Week 4 of Android -> iOS Before New Year: State Management in SwiftUI vs Compose! ⚡🧠
 
-How does SwiftUI state management compare to Jetpack Compose's remember, StateFlow, and ViewModel?
+How does state management on iOS compare to Jetpack Compose?
 
 1️⃣ remember { mutableStateOf() } -> @State
-Because a SwiftUI View is a value-type struct that gets recreated constantly, @State stores your mutable state in SwiftUI's persistent attribute graph outside the struct.
+Because SwiftUI views are immutable structs that get recreated constantly, @State stores your state in SwiftUI's persistent attribute graph outside the struct.
 
 2️⃣ (value, onValueChange) -> @Binding ($var)
-Instead of passing a value + callback lambda to every child TextField or Toggle, prefixing '$' projects a two-way Binding<T>.
+Instead of passing value + callback lambda pairs to child TextFields, prefixing '$' projects a two-way Binding<T>.
 
-3️⃣ Goodbye ObservableObject, Hello @Observable!
-In iOS 17+ / Swift 6, the @Observable macro tracks exact property reads inside body—so mutating an unread property on your ViewModel never triggers wasted recompositions!
+3️⃣ Goodbye StateFlow, Hello @Observable!
+In Swift 6 / iOS 17+, the @Observable macro tracks exact property reads inside body—so mutating an unread property never triggers wasted re-renders!
 
-🎮 Try the interactive @Observable Re-render Visualizer + 10-question quiz:
-🔗 https://sudhakar-r08.github.io/ios-for-android-devs/
+🔗 Follow my daily steps on GitHub: https://github.com/sudhakar-r08/ios-for-android-devs
+🌐 Tutorial Site: https://sudhakar-r08.github.io/ios-for-android-devs/
 
 #AndroidDev #iOSDev #SwiftUI #JetpackCompose #MVVM #MobileEngineering`,
     linkedinArticle: `# Week 4: From \`remember\` & \`StateFlow\` to \`@State\`, \`@Binding\`, and Swift's \`@Observable\` Macro
 
-State management is where declarative UI frameworks shine—or fall apart if you misunderstand view identity. In Week 4, I mapped Jetpack Compose's state primitives directly to modern SwiftUI.
-
----
-
-## 1. Why \`@State\` Exists: Ephemeral Structs, Persistent Graph
-
-A SwiftUI \`View\` is a stack-allocated \`struct\`. Every time a parent view updates, SwiftUI instantiates a fresh copy of your \`View\` struct. Marking a property with \`@State\` tells SwiftUI: *"Store this value in the persistent Attribute Graph tied to this view's position in the hierarchy."*
-
----
-
-## 2. How the \`@Observable\` Macro Changed iOS Architecture
-
-Before Swift 5.9 (iOS 17), iOS ViewModels conformed to \`ObservableObject\` and marked fields with \`@Published\`. The problem? Changing *any* \`@Published\` property fired a single \`objectWillChange\` publisher that invalidated **every** view observing that ViewModel!
-
-With the **\`@Observable\` macro**, Swift tracks exactly which properties are read inside each view's \`body\`. If \`HeaderView\` only reads \`vm.username\` and \`FooterView\` only reads \`vm.cartCount\`, updating \`cartCount\` will **never** re-evaluate \`HeaderView\`!`
+State management is the heart of declarative mobile development. In Week 4, I explored how SwiftUI handles state updates, two-way bindings, and ViewModels...`
   },
 
   // ==========================================================================
@@ -296,204 +313,243 @@ With the **\`@Observable\` macro**, Swift tracks exactly which properties are re
     week: 5,
     dates: "Nov 17 – Nov 23",
     title: "Swift Concurrency, Actors & Sendable",
-    subtitle: "Kotlin Coroutines & Dispatchers vs. Swift 6 `async`/`await`, Structured Concurrency (`TaskGroup`), `actor`, `@MainActor`, and `Sendable`.",
+    subtitle: "Kotlin Coroutines & Dispatchers vs. Swift 6 `async`/`await`, Structured Concurrency (`async let`), `actor`, `@MainActor`, and compile-time data race safety.",
     androidAnchor: "`suspend fun`, `viewModelScope.launch`, `Dispatchers.Main`/`Default`, `coroutineScope`, `Mutex`",
-    iosAnchor: "`async`/`await`, `Task {}`, `.task {}`, `withThrowingTaskGroup`, `actor`, `@MainActor`, `Sendable`",
+    iosAnchor: "`async`/`await`, `Task {}`, `.task {}`, `async let`, `actor`, `@MainActor`, `Sendable`",
     simulatorType: "actor-visualizer",
     flashcards: [
-      { front: "Difference between Kotlin `suspend` calls and Swift `async` calls at the call site?", back: "In Kotlin, calling a `suspend` function looks identical to a normal function call. In Swift, every potential suspension point MUST be explicitly marked with the `await` keyword." },
-      { front: "What happens at an `await` suspension point in Swift?", back: "The current function pauses execution and yields its thread so other tasks can run. When `await` resumes, state in your program may have changed (Actor Reentrancy)!" },
-      { front: "What is an `actor` in Swift?", back: "A reference type (like a `class`) that automatically protects its mutable state by serializing all external access through an asynchronous mailbox—eliminating data races at compile time." },
-      { front: "What is `Sendable` in Swift 6?", back: "A marker protocol enforced at compile time indicating that a type is safe to pass across concurrency domains (e.g., value-type structs with Sendable fields, immutable classes, or actors)." }
+      { front: "Difference between calling a Kotlin `suspend` function and a Swift `async` function?", back: "In Kotlin, calling a `suspend` function looks like a normal synchronous call. In Swift, every suspension point MUST be explicitly marked with the `await` keyword." },
+      { front: "What does SwiftUI's `.task { ... }` modifier do?", back: "It launches an asynchronous Task when the view appears and automatically cancels it when the view disappears (just like `LaunchedEffect` in Compose)." },
+      { front: "What is an `actor` in Swift?", back: "A reference type that protects its internal mutable state by serializing all external access through an asynchronous mailbox—preventing data races at compile time." },
+      { front: "What does `@MainActor` do?", back: "It guarantees that a ViewModel, class, or function will only ever execute on the main UI thread, enforced by the compiler." }
+    ],
+    dailySteps: [
+      {
+        day: 1,
+        title: "Swift async/await vs. Kotlin Coroutines",
+        time: "15 mins",
+        goal: "Write asynchronous functions and handle suspension points explicitly with await.",
+        shift: "`suspend fun` ➔ `func doWork() async throws`. Every suspension point requires `await`.",
+        details: [
+          "In Kotlin, calling a `suspend` function has no marker at the call site. In Swift, `await` is required so you know where threads can yield.",
+          "Use `Task { ... }` to kick off async work from synchronous code."
+        ],
+        kotlinCode: `suspend fun fetchUser(): User {
+    delay(1000)
+    return User("Sudhakar")
+}`,
+        swiftCode: `func fetchUser() async throws -> User {
+    try await Task.sleep(nanoseconds: 1_000_000_000)
+    return User(name: "Sudhakar")
+}`
+      },
+      {
+        day: 2,
+        title: "View Lifecycle Async with .task",
+        time: "15 mins",
+        goal: "Fetch data when a view appears and auto-cancel when it disappears.",
+        shift: "Compose `LaunchedEffect(key)` ➔ SwiftUI `.task(id: key) { ... }`.",
+        details: [
+          "SwiftUI's `.task` modifier automatically hooks into cooperative task cancellation when navigating away."
+        ],
+        kotlinCode: `LaunchedEffect(userId) {
+    viewModel.load(userId)
+}`,
+        swiftCode: `.task(id: userId) {
+    await viewModel.load(userId)
+}`
+      },
+      {
+        day: 3,
+        title: "Parallel Execution with async let",
+        time: "15 mins",
+        goal: "Run two or more asynchronous tasks simultaneously and wait for both.",
+        shift: "Kotlin `coroutineScope { async { }; async { } }` ➔ Swift `async let a = ...; async let b = ...`.",
+        details: [
+          "Super concise structured concurrency: `async let user = fetchUser(); async let posts = fetchPosts(); let (u, p) = try await (user, posts)`."
+        ],
+        kotlinCode: `coroutineScope {
+    val user = async { api.getUser() }
+    val feed = async { api.getFeed() }
+    Dashboard(user.await(), feed.await())
+}`,
+        swiftCode: `async let user = api.getUser()
+async let feed = api.getFeed()
+let dashboard = try await Dashboard(user: user, feed: feed)`
+      },
+      {
+        day: 4,
+        title: "@MainActor and Swift 6 Actors",
+        time: "15 mins",
+        goal: "Keep UI state on the main thread and protect shared state with actors without manual locks.",
+        shift: "`Dispatchers.Main` ➔ `@MainActor`; `Mutex` ➔ `actor`.",
+        details: [
+          "Mark ViewModels with `@MainActor` to guarantee UI updates stay on the main thread.",
+          "Use `actor` for shared in-memory caches to eliminate data races at compile time."
+        ],
+        kotlinCode: `class Cache {
+    private val mutex = Mutex()
+    suspend fun save(t: String) = mutex.withLock { token = t }
+}`,
+        swiftCode: `actor TokenCache {
+    private var token: String?
+    func save(_ t: String) { token = t }
+}`
+      },
+      {
+        day: 5,
+        title: "Week 5 Concurrency Lab, Quiz & LinkedIn Post",
+        time: "20 mins",
+        goal: "Build an async dashboard screen, complete the quiz, and share your concurrency insights.",
+        shift: "Appreciate how Swift 6 turns concurrency data races into compile-time errors.",
+        details: [
+          "Practice parallel requests with `async let` and test thread safety with actors."
+        ],
+        kotlinCode: `// Android Coroutines practice`,
+        swiftCode: `// Swift Concurrency practice`
+      }
     ],
     concepts: [
       {
-        heading: "1. Coroutines vs. `async / await` & SwiftUI's `.task` Lifecycle",
-        shift: "In Kotlin, `suspend` functions are called implicitly inside a coroutine, and we use `viewModelScope.launch` or `LaunchedEffect`. In Swift, every suspension point requires an explicit `await` keyword, and SwiftUI's `.task {}` modifier automatically starts on appear and cancels on disappear!",
+        heading: "1. Coroutines vs. `async / await` & The `.task` Modifier",
+        shift: "In Swift, every suspension point requires an explicit `await` keyword, and SwiftUI's `.task {}` modifier automatically manages cooperative task cancellation.",
         details: [
-          "<strong>Cooperative Cancellation:</strong> Just like Kotlin Coroutines (`ensureActive()`), Swift `Task` cancellation is cooperative. Use `try Task.checkCancellation()` or check `Task.isCancelled` in long loops; `URLSession` checks cancellation automatically.",
-          "<strong>Parallel Execution with `async let`:</strong> Where Kotlin uses `coroutineScope { val a = async { ... }; val b = async { ... }; a.await() + b.await() }`, Swift has super-concise structured concurrency: `async let a = fetchA(); async let b = fetchB(); let result = try await (a, b)`!"
+          "<strong>Explicit Suspension:</strong> Writing `await` reminds you that the current thread may yield to other tasks.",
+          "<strong>Cooperative Cancellation:</strong> Check `Task.isCancelled` during long loops to cancel promptly."
         ],
-        kotlinCode: `// Kotlin: Coroutine parallel decomposition
-suspend fun loadDashboard(): Dashboard = coroutineScope {
-    val userDeferred = async { api.fetchUser() }
-    val feedDeferred = async { api.fetchFeed() }
-    Dashboard(userDeferred.await(), feedDeferred.await())
-}`,
-        swiftCode: `// Swift: Structured concurrency with 'async let'
-func loadDashboard() async throws -> Dashboard {
-    async let user = api.fetchUser()
-    async let feed = api.fetchFeed()
-    // Both run in parallel; cancels sibling if either throws!
-    return try await Dashboard(user: user, feed: feed)
-}`
+        kotlinCode: `suspend fun load() = coroutineScope { ... }`,
+        swiftCode: `func load() async throws { ... }`
       },
       {
         heading: "2. `actor` & `@MainActor` vs. `Dispatchers.Main` & `Mutex`",
-        shift: "In Kotlin, forgetting `withContext(Dispatchers.Main)` or forgetting a `Mutex` lock is a runtime bug. In Swift 6, `@MainActor` and `actor` enforce thread/isolation safety at COMPILE TIME!",
+        shift: "Swift 6 uses `@MainActor` and `actor` to enforce thread isolation at compile time instead of relying on runtime discipline.",
         details: [
-          "<strong>`@MainActor` = `Dispatchers.Main` Checked at Compile Time:</strong> Annotating a ViewModel or function with `@MainActor` guarantees its properties and methods only ever execute on the main UI thread.",
-          "<strong>Actor Reentrancy Gotcha:</strong> Inside an `actor`, no two tasks can execute synchronously at the same time. However, whenever an actor method hits an `await`, it suspends—allowing another task to enter the actor before the `await` finishes! Always re-validate actor state after an `await`."
+          "<strong>`@MainActor`:</strong> Compile-time guarantee that functions execute on the main thread.",
+          "<strong>`actor`:</strong> Protects its state via a serial mailbox."
         ],
-        kotlinCode: `// Kotlin: Manual Mutex required to protect shared mutable state
-class ImageDiskCache {
-    private val mutex = Mutex()
-    private val cache = mutableMapOf<String, ByteArray>()
-
-    suspend fun put(key: String, bytes: ByteArray) = mutex.withLock {
-        cache[key] = bytes
-    }
-}`,
-        swiftCode: `// Swift: 'actor' serializes access at compile time without locks!
-actor ImageDiskCache {
-    private var cache: [String: Data] = [:]
-
-    func put(key: String, data: Data) {
-        cache[key] = data
-    }
-
-    func get(key: String) -> Data? {
-        cache[key]
-    }
-}`
-      },
-      {
-        heading: "3. `Sendable` & Swift 6 Strict Concurrency Checking",
-        shift: "Why does Swift love value types (`struct`) so much? Because passing a value-type `struct` between two concurrent `Task`s or `actor`s is inherently safe against shared-memory data races! Swift formalizes this with the `Sendable` protocol.",
-        details: [
-          "<strong>What is `Sendable`?</strong> Value types (`struct`, `enum`) composed of `Sendable` properties are implicitly `Sendable`. Mutable `class` instances are NOT `Sendable` unless isolated to an actor (`@MainActor`)."
-        ],
-        kotlinCode: `// Kotlin does not prevent passing a mutable class reference
-// across Dispatchers.Default and Dispatchers.Main at compile time.`,
-        swiftCode: `// Swift 6: Compiler verifies types crossing actor boundaries conform to Sendable
-struct UserEvent: Sendable {
-    let id: String
-    let timestamp: Date
-}`
+        kotlinCode: `withContext(Dispatchers.Main) { state = newState }`,
+        swiftCode: `@MainActor func updateState() { state = newState }`
       }
     ],
     quiz: [
       {
-        question: "1. How do you run two independent `async` functions (`fetchProfile()` and `fetchPosts()`) concurrently in Swift and wait for both to finish (similar to two `async {}` blocks inside `coroutineScope` in Kotlin)?",
+        question: "1. What does SwiftUI's `.task` modifier do when a view disappears while an async operation is still downloading?",
         options: [
-          "Call `try await fetchProfile()` on line 1 and `try await fetchPosts()` on line 2",
-          "Use `async let profile = fetchProfile()` and `async let posts = fetchPosts()`, then `try await (profile, posts)`",
-          "Use `Thread.sleep(1000)`",
-          "Mark the function with `@Concurrent`"
+          "It crashes the application",
+          "It automatically cancels the running cooperative Task",
+          "It blocks the main thread until the download finishes",
+          "It restarts the download in the background"
         ],
         correctIndex: 1,
-        explanation: "Writing `try await fetchProfile()` followed by `try await fetchPosts()` runs them sequentially! Using `async let` starts both child tasks immediately in parallel and awaits them together."
+        explanation: "`.task` ties the lifecycle of the async task to the view, automatically cancelling it if the user navigates away."
       },
       {
-        question: "2. What happens to the sibling task created with `async let` if the other sibling throws an error?",
+        question: "2. How do you run two independent async calls (`fetchA()` and `fetchB()`) concurrently in Swift and await both results?",
         options: [
-          "It continues running forever in the background (leaked coroutine)",
-          "Structured Concurrency automatically cancels the remaining `async let` child task and awaits its cleanup before exiting the function",
-          "The app terminates immediately",
-          "It retries the failed task"
+          "Call `await fetchA()` followed by `await fetchB()`",
+          "Use `async let a = fetchA()` and `async let b = fetchB()`, then `await (a, b)`",
+          "Use a `while` loop",
+          "Mark the function `@Concurrent`"
         ],
         correctIndex: 1,
-        explanation: "Just like Kotlin's `coroutineScope`, Swift's Structured Concurrency (`async let` and `TaskGroup`) guarantees no child task outlives its parent scope—automatically cancelling siblings when an error is thrown."
+        explanation: "`async let` starts child tasks immediately in parallel, awaiting both at the point where their values are combined."
       },
       {
-        question: "3. Why do callers outside a Swift `actor` have to use `await` when reading a property or calling a method on that actor?",
+        question: "3. What is the primary purpose of an `actor` in Swift?",
         options: [
-          "Because actors are stored on a remote server",
-          "Because the actor serializes access to its isolated state; if the actor is currently busy processing another message, the caller must suspend until its turn",
-          "Because actors use reflection",
-          "Only `private` methods require `await`"
+          "To animate SwiftUI views",
+          "To protect mutable state from data races by serializing access through an asynchronous queue at compile time",
+          "To replace structs",
+          "To run database migrations"
         ],
         correctIndex: 1,
-        explanation: "An `actor` protects its internal state via a serial mailbox. Crossing into the actor's isolation domain from outside is a potential suspension point, requiring `await`."
+        explanation: "An `actor` is a reference type that eliminates data races by isolating its state and serializing method calls."
       },
       {
-        question: "4. What is 'Actor Reentrancy' in Swift Concurrency, and why must you be careful with it?",
+        question: "4. What does the `@MainActor` attribute guarantee?",
         options: [
-          "When an actor calls itself recursively and causes a stack overflow",
-          "When an actor method suspends at an `await` point, other tasks can execute on the same actor before the `await` resumes—meaning actor properties may have changed across the `await`!",
-          "When two threads mutate an actor variable simultaneously",
-          "When an actor is deallocated twice"
+          "The code executes in the background",
+          "The annotated class, method, or property will only ever be accessed on the main UI thread",
+          "The code compiles faster",
+          "It disables animations"
         ],
         correctIndex: 1,
-        explanation: "To prevent deadlocks, Swift actors are reentrant across `await` suspension points. Never assume an actor property checked *before* an `await` still has the same value *after* the `await`!"
+        explanation: "`@MainActor` binds execution to the main dispatch queue at compile time, preventing background UI mutation bugs."
       },
       {
-        question: "5. What is the Swift equivalent of Kotlin's `withContext(Dispatchers.Main)` for ensuring UI state updates happen on the main thread?",
+        question: "5. What is `Sendable` in Swift 6?",
         options: [
-          "Annotating the ViewModel/function with `@MainActor` (or calling `await MainActor.run { ... }`)",
-          "`DispatchQueue.global().sync`",
-          "`@BackgroundThread`",
-          "`Thread.current.isMain`"
+          "A protocol for JSON serialization",
+          "A compile-time marker protocol indicating that a type is safe to pass across concurrency boundaries without data races",
+          "A networking library",
+          "A push notification service"
+        ],
+        correctIndex: 1,
+        explanation: "`Sendable` ensures that values passed between concurrent tasks or actors cannot introduce shared-state data races."
+      },
+      {
+        question: "6. What is the key difference between `Task` and `Task.detached`?",
+        options: [
+          "`Task` runs in background; `Task.detached` runs on the main thread",
+          "`Task` inherits the calling context's actor isolation and priority; `Task.detached` starts a brand-new unisolated background task",
+          "`Task.detached` is only for SwiftUI previews",
+          "There is no difference; they are aliases"
+        ],
+        correctIndex: 1,
+        explanation: "Standard `Task { }` inherits actor context (e.g. `@MainActor`) and priority. `Task.detached` creates an unconstrained task that does not inherit caller attributes."
+      },
+      {
+        question: "7. How do you implement cooperative cancellation checks in a long-running Swift `Task` (equivalent to Kotlin's `ensureActive()`)?",
+        options: [
+          "Call `Thread.kill()`",
+          "Check `Task.isCancelled` or call `try Task.checkCancellation()`",
+          "Throw an uncaught runtime exception",
+          "Call `exit(0)`"
+        ],
+        correctIndex: 1,
+        explanation: "`try Task.checkCancellation()` throws `CancellationError` immediately if the enclosing task has been cancelled, halting further execution cleanly."
+      },
+      {
+        question: "8. What happens in Swift 6 Complete Concurrency Checking if you pass an unisolated, mutable class across actor boundaries?",
+        options: [
+          "It compiles silently but crashes in production",
+          "The compiler emits a hard error: 'Sending value of non-Sendable type risks causing data races'",
+          "It automatically clones the class on the heap",
+          "It forces the class to run on GCD"
+        ],
+        correctIndex: 1,
+        explanation: "Swift 6's primary breakthrough is compile-time data race elimination; passing non-Sendable mutable reference types across isolation boundaries triggers a compiler error."
+      },
+      {
+        question: "9. How do you iterate over an asynchronous stream of values in Swift (equivalent to Kotlin's `Flow.collect { }`)?",
+        options: [
+          "`for await item in stream { ... }`",
+          "`stream.subscribe { item in ... }`",
+          "`while (stream.hasNext()) { ... }`",
+          "`stream.forEachSync { ... }`"
         ],
         correctIndex: 0,
-        explanation: "`@MainActor` is a global actor bound to the main UI thread. The Swift compiler statically guarantees that `@MainActor`-isolated properties are only mutated on the main thread."
+        explanation: "`for await item in stream` consumes types conforming to `AsyncSequence`, suspending cleanly as each element is emitted."
       },
       {
-        question: "6. What does SwiftUI's `.task(id: selectedUserId) { ... }` modifier do when `selectedUserId` changes?",
+        question: "10. If an actor method needs to access non-isolated logic or does not touch actor-isolated state, how can you mark it to avoid requiring `await` from outside?",
         options: [
-          "Nothing; `.task` only runs once when the app launches",
-          "It automatically cancels the previous in-flight `Task` and launches a new `Task` for the new `selectedUserId` (just like `LaunchedEffect(selectedUserId)` in Compose!)",
-          "It pauses the main thread",
-          "It clears `UserDefaults`"
+          "`@MainActor`",
+          "`nonisolated`",
+          "`@concurrent`",
+          "`@unbound`"
         ],
         correctIndex: 1,
-        explanation: "`.task(id:)` mirrors Jetpack Compose's `LaunchedEffect(key)`: it cancels the running task when the view disappears OR whenever the `id` value changes, then restarts with the new value."
-      },
-      {
-        question: "7. What does the `Sendable` protocol enforce in Swift 6?",
-        options: [
-          "That a type can be serialized to JSON over HTTP",
-          "That a value of that type can be safely passed across concurrency domains (between actors/tasks) without introducing shared-mutable-state data races",
-          "That a type can be sent via AirDrop",
-          "That a struct is smaller than 64 bytes"
-        ],
-        correctIndex: 1,
-        explanation: "`Sendable` is Swift's compile-time marker protocol for thread-safe transfer across actor and task boundaries."
-      },
-      {
-        question: "8. Why is a Swift `struct` whose properties are `Int`, `String`, and `[Double]` automatically `Sendable`, whereas a `class` with `var count: Int` is NOT?",
-        options: [
-          "Because structs are value types (each task gets an isolated copy), whereas passing a mutable class shares the same heap instance across concurrent tasks",
-          "Because classes cannot conform to protocols",
-          "Because `Int` and `String` are classes",
-          "Because structs run on the GPU"
-        ],
-        correctIndex: 0,
-        explanation: "Value types (`struct`, `enum`) with `Sendable` fields copy their value when passed across tasks, making concurrent mutation impossible."
-      },
-      {
-        question: "9. How do you bridge an old callback/delegate-based iOS API into an `async/await` function (equivalent to Kotlin's `suspendCancellableCoroutine`)?",
-        options: [
-          "Use `withCheckedContinuation` or `withCheckedThrowingContinuation`",
-          "Use a `while(true)` loop",
-          "Use `DispatchQueue.main.asyncAfter`",
-          "Use `@Observable`"
-        ],
-        correctIndex: 0,
-        explanation: "`withCheckedContinuation` (and `withCheckedThrowingContinuation`) wraps callback APIs into `async` functions and verifies at runtime that `continuation.resume(...)` is called exactly once!"
-      },
-      {
-        question: "10. When you need to launch a dynamic number of concurrent child tasks (e.g., downloading 15 images in parallel) and collect their results, which Swift API do you use?",
-        options: [
-          "`withTaskGroup` or `withThrowingTaskGroup`",
-          "`async let` inside a `for` loop",
-          "`Timer.scheduledTimer`",
-          "`NSThread`"
-        ],
-        correctIndex: 0,
-        explanation: "`async let` is for a fixed, statically known number of tasks; `withTaskGroup` / `withThrowingTaskGroup` dynamically spawns child tasks in a `for` loop while preserving structured concurrency."
+        explanation: "Marking a method as `nonisolated` opts it out of actor isolation, allowing callers to execute it synchronously if it does not touch mutable actor state."
       }
     ],
     codeChallenge: {
       instructions: "Complete the Week 5 Concurrency Lab: (1) Declare `TokenStore` as an `actor`, (2) Mark `loadDashboard` as `async throws`, and (3) Use `async let` to fetch `user` in parallel.",
-      starterCode: `// TODO 1: Change 'class' to 'actor' for compile-time thread safety
-class TokenStore {
+      starterCode: `class TokenStore {
     private var token: String?
     func save(_ newToken: String) { token = newToken }
 }
 
-// TODO 2: Mark loadDashboard() as 'async throws -> String'
-// and use 'async let name = fetchName()' inside
 func fetchName() async throws -> String { "Sudhakar" }
 
 func loadDashboard() -> String {
@@ -516,35 +572,27 @@ func loadDashboard() async throws -> String {
     },
     linkedinPost: `Week 5 of Android -> iOS Before New Year: Kotlin Coroutines vs Swift 6 Concurrency & Actors! 🧵⚡
 
-As an Android developer, I love Kotlin Coroutines. But Swift 6 takes concurrency one giant step further: it turns data races into COMPILE-TIME errors!
+As an Android developer who uses Coroutines daily, learning Swift Concurrency was fascinating:
 
-Here is how Kotlin Coroutines map to Swift Concurrency:
-1️⃣ suspend fun -> async / await (Every suspension point in Swift is explicitly marked with 'await'!)
-2️⃣ LaunchedEffect(key) -> .task(id: key) { } (Auto-starts on appear and auto-cancels on disappear or key change)
-3️⃣ coroutineScope { async { } } -> async let & TaskGroup (Structured Concurrency)
-4️⃣ Mutex + Dispatchers.Main -> actor & @MainActor (Compiler-enforced isolation + Sendable checking!)
+1️⃣ Explicit await
+In Kotlin, suspend calls look like normal functions. In Swift, you MUST write 'await' at every suspension point so you know exactly where execution yields.
 
-🔬 Try the interactive Actor Concurrency Visualizer + 10-question quiz on my site:
-🔗 https://sudhakar-r08.github.io/ios-for-android-devs/
+2️⃣ LaunchedEffect -> .task { }
+SwiftUI's .task modifier automatically starts on appear and cancels on disappear.
 
-#AndroidDev #iOSDev #Kotlin #Swift6 #Coroutines #Concurrency #MobileEngineering`,
-    linkedinArticle: `# Week 5: Kotlin Coroutines vs. Swift 6 Concurrency — \`async/await\`, \`actor\`, and Compile-Time Race Safety
+3️⃣ Dispatchers.Main -> @MainActor
+Marking a ViewModel with @MainActor guarantees all mutations happen on the UI thread—enforced at compile time!
 
-If you have written Kotlin Coroutines with \`suspend\`, \`viewModelScope\`, and \`Dispatchers\`, Swift's \`async/await\` will feel immediately natural. However, Swift 6 introduces a capability we don't have on the JVM: **compile-time data-race safety** via Actors and \`Sendable\`.
+4️⃣ Mutex -> actor
+Swift's 'actor' keyword gives you compile-time thread-safe state without manual lock boilerplate.
 
----
+🔗 GitHub: https://github.com/sudhakar-r08/ios-for-android-devs
+🌐 Tutorial Site: https://sudhakar-r08.github.io/ios-for-android-devs/
 
-## 1. Explicit \`await\` and Actor Reentrancy
+#AndroidDev #iOSDev #Kotlin #Swift6 #Coroutines #Concurrency`,
+    linkedinArticle: `# Week 5: Kotlin Coroutines vs. Swift 6 Concurrency — \`async/await\`, \`actor\`, and Compile-Time Safety
 
-In Kotlin, calling a \`suspend\` function looks identical to a normal synchronous call. In Swift, you must write \`await\` at every potential suspension point. Why? Because at an \`await\`, your function yields the thread—alerting you that shared state could change before execution resumes!
-
----
-
-## 2. \`actor\` vs. Kotlin \`Mutex\`
-
-In Kotlin, protecting an in-memory cache from concurrent coroutine mutations requires manually wrapping reads and writes in \`mutex.withLock { ... }\`. If a teammate forgets \`withLock\` in one method, it compiles fine and causes a race condition in production.
-
-In Swift, you simply declare \`actor ImageCache { ... }\`. The compiler guarantees no external caller can touch its properties without asynchronously queuing through the actor's serial executor.`
+If you write Kotlin Coroutines with \`suspend\` and \`Dispatchers\`, Swift's \`async/await\` will feel immediately familiar...`
   },
 
   // ==========================================================================
@@ -559,213 +607,219 @@ In Swift, you simply declare \`actor ImageCache { ... }\`. The compiler guarante
     iosAnchor: "`List` / `LazyVStack`, `NavigationStack` + `NavigationPath`, `.sheet(item:)`, `@Environment(\\.scenePhase)`",
     simulatorType: "navigation-visualizer",
     flashcards: [
-      { front: "Difference between `List` and `LazyVStack` inside a `ScrollView` in SwiftUI?", back: "Both lazily instantiate rows. `List` provides native iOS system styling, swipe actions (`.swipeActions`), pull-to-refresh, and edit/reorder support out of the box. `LazyVStack` inside `ScrollView` is an unstyled canvas for custom layouts." },
-      { front: "Why must models iterated in `List(items)` or `ForEach(items)` conform to `Identifiable`?", back: "Just like `key = { it.id }` in Compose's `LazyColumn`, SwiftUI needs a stable `id` per item to track row insertions, moves, deletions, and state without glitches." },
-      { front: "How does `NavigationStack` handle programmatic deep links or 'Pop to Root'?", back: "By binding `NavigationStack(path: $router.path)` to a `@State` array `[Route]` or `NavigationPath`. Calling `path.removeAll()` immediately pops all screens back to the root!" },
-      { front: "What are the 3 states of `@Environment(\\.scenePhase)` in a SwiftUI App?", back: "`.active` (in foreground and receiving events), `.inactive` (visible but paused, e.g., system notification shade or app switcher open), and `.background` (off-screen)." }
+      { front: "Difference between `List` and `LazyVStack` in SwiftUI?", back: "`List` provides platform-native styling, separators, swipe actions, and pull-to-refresh out of the box. `LazyVStack` inside a `ScrollView` is an unstyled, custom canvas." },
+      { front: "Why must models in `List(items)` conform to `Identifiable`?", back: "So SwiftUI's diffing engine has a stable ID to animate insertions/deletions and preserve row state (like `key = { it.id }` in Compose)." },
+      { front: "How do you pop all screens back to the root in `NavigationStack(path: $path)`?", back: "Call `path.removeAll()`. The entire backstack is simply a state array of routes!" },
+      { front: "What are the 3 states of `@Environment(\\.scenePhase)`?", back: "`.active` (foreground & focused), `.inactive` (visible but paused, like app switcher open), and `.background` (off-screen)." }
+    ],
+    dailySteps: [
+      {
+        day: 1,
+        title: "Lazy Lists with List and Identifiable",
+        time: "15 mins",
+        goal: "Render high-performance scrolling feeds with native pull-to-refresh and swipe actions.",
+        shift: "`LazyColumn` ➔ `List(items)`. Models conform to `Identifiable`.",
+        details: [
+          "Conforming your model to `Identifiable` gives it a stable `id` for diffing.",
+          "Add `.refreshable { await load() }` and `.swipeActions` in 1 line."
+        ],
+        kotlinCode: `LazyColumn { items(tasks, key = { it.id }) { TaskRow(it) } }`,
+        swiftCode: `List(tasks) { task in
+    TaskRow(task: task)
+        .swipeActions { Button("Delete", role: .destructive) { delete(task) } }
+}
+.refreshable { await reload() }`
+      },
+      {
+        day: 2,
+        title: "NavigationStack & The State Backstack",
+        time: "15 mins",
+        goal: "Navigate between screens using type-safe route values.",
+        shift: "`NavHost` ➔ `NavigationStack(path: $path)`. The backstack is literally an array!",
+        details: [
+          "Push a screen: `path.append(.detail(id: 42))`.",
+          "Pop to root: `path.removeAll()`."
+        ],
+        kotlinCode: `navController.navigate(DetailRoute(id = 42))`,
+        swiftCode: `NavigationStack(path: $path) {
+    HomeScreen()
+        .navigationDestination(for: Route.self) { route in
+            DetailScreen(route: route)
+        }
+}`
+      },
+      {
+        day: 3,
+        title: "Bottom Sheets and Modals with .sheet",
+        time: "15 mins",
+        goal: "Present sheets and configure snap detents like Android bottom sheets.",
+        shift: "`ModalBottomSheet` ➔ `.sheet(item: $selected) { ... }`.",
+        details: [
+          "Use `.presentationDetents([.medium, .large])` to create half-screen draggable bottom sheets."
+        ],
+        kotlinCode: `ModalBottomSheet(onDismissRequest = { ... }) { ... }`,
+        swiftCode: `.sheet(item: $selectedTask) { task in
+    TaskDetailView(task: task)
+        .presentationDetents([.medium, .large])
+}`
+      },
+      {
+        day: 4,
+        title: "App Entry Point (@main) & ScenePhase",
+        time: "15 mins",
+        goal: "Detect when the app moves to background or returns to foreground.",
+        shift: "`Activity` Lifecycle ➔ `@Environment(\\.scenePhase)` in `@main struct MyApp: App`.",
+        details: [
+          "Observe `.active`, `.inactive`, and `.background` transitions cleanly across the entire app."
+        ],
+        kotlinCode: `LifecycleEventEffect(Lifecycle.Event.ON_STOP) { flush() }`,
+        swiftCode: `.onChange(of: scenePhase) { _, newPhase in
+    if newPhase == .background { flushAnalytics() }
+}`
+      },
+      {
+        day: 5,
+        title: "Week 6 Multi-Screen Project, Quiz & LinkedIn Post",
+        time: "20 mins",
+        goal: "Build a complete 3-screen navigation flow with sheets, test your skills, and share your week.",
+        shift: "Appreciate how state-driven navigation makes deep linking and popping to root effortless.",
+        details: [
+          "Connect a list screen to detail pages and settings modals."
+        ],
+        kotlinCode: `// Android Navigation Compose flow`,
+        swiftCode: `// SwiftUI NavigationStack flow`
+      }
     ],
     concepts: [
       {
         heading: "1. `List` & `ForEach` vs. Jetpack Compose `LazyColumn`",
-        shift: "In Compose, forgetting `key = { it.id }` inside `LazyColumn { items(list) }` is a common performance trap. In SwiftUI, `List(items)` and `ForEach(items)` require elements to conform to the `Identifiable` protocol at compile time!",
+        shift: "SwiftUI's `List` provides built-in system styling, swipe actions, and pull-to-refresh out of the box.",
         details: [
-          "<strong>Built-in Swipe Actions & Search:</strong> Adding swipe-to-delete or custom swipe buttons on iOS takes 3 lines of code with `.swipeActions { ... }`, and adding a native system search bar takes `.searchable(text: $query)`."
+          "Models must conform to `Identifiable` for stable row diffing."
         ],
-        kotlinCode: `LazyColumn {
-    items(items = tasks, key = { it.id }) { task ->
-        TaskRow(task)
-    }
-}`,
-        swiftCode: `struct TaskItem: Identifiable {
-    let id: UUID
-    let title: String
-}
-
-List(tasks) { task in
-    TaskRow(task: task)
-        .swipeActions(edge: .trailing) {
-            Button("Delete", role: .destructive) { delete(task) }
-        }
-}
-.searchable(text: $searchQuery)
-.refreshable { await viewModel.reload() }`
+        kotlinCode: `LazyColumn { items(tasks) { Text(it.name) } }`,
+        swiftCode: `List(tasks) { task in Text(task.name) }`
       },
       {
-        heading: "2. Value-Driven Navigation (`NavigationStack` & `NavigationPath`)",
-        shift: "Where Android's Navigation Compose uses `NavHost` + `navController.navigate(Route)`, SwiftUI's `NavigationStack(path: $path)` treats the entire navigation backstack as a simple mutable Array of `Hashable` route values!",
+        heading: "2. Value-Driven Navigation with `NavigationStack`",
+        shift: "The entire backstack is a mutable array of `Hashable` routes—pop to root is simply `path.removeAll()`.",
         details: [
-          "<strong>Pop to Root in 1 Line:</strong> Because the backstack is just `@State private var path: [AppRoute] = []`, popping 4 screens back to the home screen is literally `path.removeAll()`!",
-          "<strong>Modals & Bottom Sheets (`.sheet` & `.fullScreenCover`):</strong> Present modals declaratively by binding `.sheet(item: $selectedItem) { item in ... }`, and customize bottom-sheet snap heights with `.presentationDetents([.medium, .large])`."
+          "Register destination builders with `.navigationDestination(for:)`."
         ],
-        kotlinCode: `@Serializable sealed interface Route {
-    @Serializable data class Detail(val id: String) : Route
-}
-// Pop to root:
-navController.popBackStack(HomeRoute, inclusive = false)`,
-        swiftCode: `enum AppRoute: Hashable {
-    case detail(id: String)
-    case settings
-}
-
-struct RootNavigator: View {
-    @State private var path: [AppRoute] = []
-
-    var body: some View {
-        NavigationStack(path: $path) {
-            HomeScreen(onOpenDetail: { id in path.append(.detail(id: id)) })
-                .navigationDestination(for: AppRoute.self) { route in
-                    switch route {
-                    case .detail(let id): DetailScreen(id: id)
-                    case .settings: SettingsScreen(onPopToRoot: { path.removeAll() })
-                    }
-                }
-        }
-    }
-}`
-      },
-      {
-        heading: "3. App Entry Point (`@main App`) & `ScenePhase` Lifecycle",
-        shift: "Instead of `Application` + `MainActivity` + `AndroidManifest.xml`, a SwiftUI app starts at `@main struct MyApp: App` containing a `WindowGroup` scene, and observes foreground/background lifecycle via `@Environment(\\.scenePhase)`.",
-        details: [
-          "<strong>Handling Deep Links:</strong> Attach `.onOpenURL { url in ... }` to your root view inside `WindowGroup` to parse incoming custom URL schemes or Universal Links and push routes onto `path`."
-        ],
-        kotlinCode: `// Android: LifecycleEventObserver on ProcessLifecycleOwner or Activity
-LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
-    viewModel.flushAnalytics()
-}`,
-        swiftCode: `@main
-struct MyLearningApp: App {
-    @Environment(\\.scenePhase) private var scenePhase
-
-    var body: some Scene {
-        WindowGroup {
-            RootNavigator()
-        }
-        .onChange(of: scenePhase) { _, newPhase in
-            if newPhase == .background {
-                flushAnalytics()
-            }
-        }
-    }
-}`
+        kotlinCode: `navController.popBackStack(Home, inclusive = false)`,
+        swiftCode: `path.removeAll()`
       }
     ],
     quiz: [
       {
-        question: "1. Why does SwiftUI's `List(items)` require the element type to conform to `Identifiable` (or require an explicit `id:` key path)?",
+        question: "1. How do you pop all screens in a `NavigationStack(path: $path)` back to the root?",
         options: [
-          "To save items to SQLite automatically",
-          "So SwiftUI's diffing engine has a stable identity per row to animate insertions/deletions and preserve row state accurately (just like `key = { it.id }` in Compose's `LazyColumn`)",
-          "Because structs don't have memory addresses",
-          "To sort the list alphabetically"
-        ],
-        correctIndex: 1,
-        explanation: "Stable identity via `Identifiable` allows SwiftUI to track each item across state mutations without recycling the wrong row state."
-      },
-      {
-        question: "2. If you bind `NavigationStack(path: $path)` where `path` is `@State private var path: [Route] = [.profile, .editProfile, .security]`, how do you pop all the way back to the root screen?",
-        options: [
-          "Call `finishAffinity()`",
           "Call `path.removeAll()`",
-          "Create a new `UIWindow`",
-          "Throw an exception"
-        ],
-        correctIndex: 1,
-        explanation: "Because `NavigationStack` is purely state-driven, mutating the `path` array to `[]` (`path.removeAll()`) smoothly pops back to the root view!"
-      },
-      {
-        question: "3. What protocol MUST your route enum (`enum AppRoute`) conform to so it can be used with `NavigationLink(value:)` and `.navigationDestination(for:)`?",
-        options: [
-          "`Hashable`",
-          "`Comparable`",
-          "`Error`",
-          "`ViewModifier`"
+          "Call `finish()`",
+          "Restart the app",
+          "Pop each screen with a loop"
         ],
         correctIndex: 0,
-        explanation: "SwiftUI's value-based navigation requires route values to conform to `Hashable` so it can compare and store destinations in the navigation stack."
+        explanation: "Because `path` is an array of routes, calling `path.removeAll()` empties the backstack and returns to the root."
       },
       {
-        question: "4. How do you configure a SwiftUI `.sheet` modal to behave like an Android Bottom Sheet that stops halfway up the screen and can be dragged to full height?",
+        question: "2. What protocol must your models conform to when displayed in a `List(items)` without specifying an explicit `id:` parameter?",
+        options: ["`Identifiable`", "`Hashable`", "`Codable`", "`Equatable`"],
+        correctIndex: 0,
+        explanation: "Conforming to `Identifiable` provides a stable `id` property that SwiftUI uses to track rows."
+      },
+      {
+        question: "3. How do you configure a SwiftUI `.sheet` to snap to half height like an Android bottom sheet?",
         options: [
-          "Attach `.presentationDetents([.medium, .large])` to the content view inside the `.sheet`",
-          "Use `.frame(height: 300)`",
-          "Use `ZStack` with a gesture",
+          "Attach `.presentationDetents([.medium, .large])` inside the sheet content",
+          "Set `.frame(height: 300)`",
+          "Use a `ZStack`",
           "Use `fullScreenCover`"
         ],
         correctIndex: 0,
-        explanation: "`.presentationDetents([.medium, .large])` (or custom `.fraction(0.4)` / `.height(250)`) gives you native iOS bottom sheet snapping behavior."
+        explanation: "`.presentationDetents([.medium, .large])` enables half-screen and full-screen snap points."
       },
       {
-        question: "5. What is the difference between `.sheet(isPresented:)` and `.sheet(item:)` in SwiftUI?",
+        question: "4. What modifier adds native pull-to-refresh to a SwiftUI `List`?",
         options: [
-          "`.sheet(item:)` only works on iPad",
-          "`.sheet(item: $selectedUser)` binds to an Optional `Identifiable` model and passes the unwrapped non-optional `user` directly into the sheet closure, preventing empty/nil state bugs",
-          "`.sheet(isPresented:)` is deprecated",
-          "They are identical"
-        ],
-        correctIndex: 1,
-        explanation: "Using `.sheet(item: $selectedItem)` avoids having a separate boolean `showSheet` and optional `selectedItem` that could get out of sync!"
-      },
-      {
-        question: "6. How do you add native pull-to-refresh to a `List` in SwiftUI?",
-        options: [
-          "Wrap the `List` in `SwipeRefreshLayout`",
-          "Attach `.refreshable { await viewModel.refresh() }` to the `List`",
-          "Add a `DragGesture` to every row",
-          "Use `UIViewRepresentable`"
-        ],
-        correctIndex: 1,
-        explanation: "The `.refreshable { ... }` modifier automatically adds a native iOS pull-to-refresh spinner to any `List` or `ScrollView` and awaits your async closure."
-      },
-      {
-        question: "7. Which `ScenePhase` value indicates that your iOS app is still visible on screen (for example, while the user pulls down Control Center or the notification shade) but is not currently receiving touch input?",
-        options: [
-          "`.active`",
-          "`.inactive`",
-          "`.background`",
-          "`.suspended`"
-        ],
-        correctIndex: 1,
-        explanation: "`.inactive` corresponds to Android's `ON_PAUSE` (visible but not focused), whereas `.background` corresponds to `ON_STOP` (no longer visible)."
-      },
-      {
-        question: "8. When should you choose `ScrollView { LazyVStack { ... } }` instead of `List { ... }` in SwiftUI?",
-        options: [
-          "When you want native swipe-to-delete actions",
-          "When you need a completely custom card/grid feed layout without iOS system list separators, insets, or cell backgrounds",
-          "When your list has fewer than 5 items",
-          "Never; `LazyVStack` is not lazy"
-        ],
-        correctIndex: 1,
-        explanation: "`List` applies platform-specific table styling and provides swipe/reorder features; `ScrollView` + `LazyVStack` gives you raw lazy composition with zero system chrome."
-      },
-      {
-        question: "9. Why should you NEVER wrap a `LazyVStack` without a parent `ScrollView`?",
-        options: [
-          "It fails to compile",
-          "Without a `ScrollView`, `LazyVStack` proposes the entire height at once and instantiates all child views immediately—defeating lazy loading!",
-          "It crashes on iOS 18",
-          "It disables touch events"
-        ],
-        correctIndex: 1,
-        explanation: "`LazyVStack` relies on an enclosing `ScrollView` viewport to know which subviews are currently visible on screen."
-      },
-      {
-        question: "10. What type lets you push heterogeneous route types (e.g., `UserRoute`, `ProductRoute`, `OrderRoute` from different feature modules) onto a single `NavigationStack`?",
-        options: [
-          "`NavigationPath`",
-          "`[String]`",
-          "`AnyObject`",
-          "`Bundle`"
+          "`.refreshable { await reload() }`",
+          "`.pullToRefresh()`",
+          "`.swipeDown()`",
+          "`.onRefresh()`"
         ],
         correctIndex: 0,
-        explanation: "`NavigationPath` is a type-erased collection of `Hashable` route values designed for multi-module navigation where different modules define their own route enums."
+        explanation: "`.refreshable` automatically shows a native iOS refresh spinner and awaits your async closure."
+      },
+      {
+        question: "5. What does the `ScenePhase.background` state signify in a SwiftUI app?",
+        options: [
+          "The app is not visible on screen (similar to `ON_STOP` in Android)",
+          "The app is playing background audio",
+          "The background color is active",
+          "The app crashed"
+        ],
+        correctIndex: 0,
+        explanation: "`.background` indicates the app is no longer visible to the user."
+      },
+      {
+        question: "6. How does SwiftUI's `ForEach` achieve item identity when items do not conform to `Identifiable`?",
+        options: [
+          "It refuses to compile",
+          "By specifying an explicit keypath to a unique property, such as `ForEach(items, id: \\.self)` or `id: \\.uuid`",
+          "By assigning random UUIDs on every render",
+          "By wrapping items in an NSArray"
+        ],
+        correctIndex: 1,
+        explanation: "If a type does not conform to `Identifiable`, you can pass a keypath using `id: \\.propertyName` where the property conforms to `Hashable`."
+      },
+      {
+        question: "7. What is the modern approach to navigating to a new screen when a list item is tapped in SwiftUI?",
+        options: [
+          "Calling `startActivity(Intent(...))`",
+          "Wrapping the row content in `NavigationLink(value: item)` and attaching `.navigationDestination(for: ItemType.self)`",
+          "Using storyboards and segues",
+          "Presenting a modal alert"
+        ],
+        correctIndex: 1,
+        explanation: "Value-based navigation decouples the triggering UI (`NavigationLink(value:)`) from destination view construction (`.navigationDestination(for:)`)."
+      },
+      {
+        question: "8. How do you implement swipe-to-delete or custom row actions on a SwiftUI `List`?",
+        options: [
+          "Implement `ItemTouchHelper.SimpleCallback`",
+          "Use the `.swipeActions` modifier on the row view or `.onDelete(perform:)` on the `ForEach`",
+          "Add a pan gesture recognizer manually",
+          "Override `tableView(_:commit:forRowAt:)`"
+        ],
+        correctIndex: 1,
+        explanation: "SwiftUI provides declarative swipe actions via `.swipeActions(edge: .trailing)` or `.onDelete(perform:)` on collections."
+      },
+      {
+        question: "9. How do you present a full-screen modal in SwiftUI (similar to opening a full Activity on Android without backstack push)?",
+        options: [
+          "`.sheet(isPresented:)`",
+          "`.fullScreenCover(isPresented:)`",
+          "`.modalOverlay()`",
+          "`.window()`"
+        ],
+        correctIndex: 1,
+        explanation: "`.fullScreenCover(isPresented:)` presents a modal covering the entire screen, including navigation bars and tab bars."
+      },
+      {
+        question: "10. In MVVM architecture with SwiftUI, how should user actions (like tapping a delete button) be communicated?",
+        options: [
+          "The View calls a method on the ViewModel (e.g., `viewModel.deleteItem(id)`), which mutates its observable state",
+          "The View directly modifies the database table",
+          "The ViewModel imports `SwiftUI` and manipulates the view hierarchy",
+          "The View sends an IPC message to the operating system"
+        ],
+        correctIndex: 0,
+        explanation: "In clean unidirectional MVVM, Views observe state and invoke intent methods on the ViewModel, which handles business logic and updates its state."
       }
     ],
     codeChallenge: {
       instructions: "Complete the Week 6 Navigation Lab: (1) Conform `Route` to `Hashable`, (2) Bind `NavigationStack(path: $path)`, and (3) Register `.navigationDestination(for: Route.self)`.",
-      starterCode: `// TODO 1: Conform Route to Hashable
-enum Route {
+      starterCode: `enum Route {
     case detail(Int)
 }
 
@@ -773,7 +827,6 @@ struct MainRouter: View {
     @State private var path: [Route] = []
 
     var body: some View {
-        // TODO 2: Bind path: $path and add .navigationDestination(for: Route.self)
         NavigationStack {
             Text("Home")
         }
@@ -800,36 +853,25 @@ struct MainRouter: View {
 ✓ .navigationDestination(for: Route.self) registered!`,
       requiredTokens: ["Hashable", "NavigationStack(path: $path)", ".navigationDestination(for: Route.self)"]
     },
-    linkedinPost: `Week 6 of Android -> iOS Before New Year: NavigationStack, Lazy Lists & App Lifecycle! 🧭📱
+    linkedinPost: `Week 6 of Android -> iOS Before New Year: Navigation, Lazy Lists & App Lifecycle! 🧭📱
 
-How do LazyColumn, NavHost, and Activity Lifecycle translate to SwiftUI?
+How do LazyColumn, NavHost, and Activity Lifecycle map to SwiftUI?
 
-1️⃣ LazyColumn(key = { it.id }) -> List & Identifiable
-In Compose, forgetting the 'key' lambda in LazyColumn is a common bug. In SwiftUI, List requires your model to conform to the Identifiable protocol at compile time! Plus, pull-to-refresh (.refreshable) and swipe actions (.swipeActions) take 1 modifier each.
+1️⃣ LazyColumn -> List & Identifiable
+SwiftUI's List handles row recycling, separators, and swipe-to-delete (.swipeActions) in just a few lines.
 
 2️⃣ NavHost -> NavigationStack(path: $path)
-In SwiftUI, the entire navigation backstack is just a mutable @State Array of Hashable enums! Want to pop 5 screens back to Root? Just call 'path.removeAll()'.
+The entire navigation backstack is just an array of route enums! Want to pop to root? Call 'path.removeAll()'.
 
-3️⃣ Bottom Sheets -> .sheet + .presentationDetents([.medium, .large])
-Declarative half/full bottom sheets in one line of code.
+3️⃣ ModalBottomSheet -> .sheet + .presentationDetents([.medium, .large])
+Declarative bottom sheets with native iOS gesture physics.
 
-🧭 Try the interactive NavigationStack Visualizer + 10-question quiz:
-🔗 https://sudhakar-r08.github.io/ios-for-android-devs/
+🔗 GitHub: https://github.com/sudhakar-r08/ios-for-android-devs
+🌐 Tutorial: https://sudhakar-r08.github.io/ios-for-android-devs/
 
 #AndroidDev #iOSDev #SwiftUI #JetpackCompose #MobileArchitecture`,
-    linkedinArticle: `# Week 6: Value-Driven Navigation (\`NavigationStack\`), \`List\` vs \`LazyColumn\`, and \`ScenePhase\`
+    linkedinArticle: `# Week 6: NavigationStack, Lazy Lists, and Lifecycle in SwiftUI
 
-In Week 6, I compared how Android and iOS handle multi-screen navigation, lazy scrolling feeds, and app lifecycle transitions.
-
----
-
-## 1. The Backstack Is Just an Array: \`NavigationStack(path: $path)\`
-
-In Jetpack Compose, we interact with a \`NavHostController\` imperatively (\`navController.navigate(...)\`, \`navController.popBackStack(...)\`).
-In SwiftUI, \`NavigationStack(path: $path)\` binds directly to a value-type array \`@State private var path: [AppRoute] = []\`.
-- Push a screen: \`path.append(.detail(id: 42))\`
-- Pop one screen: \`path.removeLast()\`
-- Pop to root from anywhere: \`path.removeAll()\`
-- Deep link into a 3-screen flow: \`path = [.orders, .orderDetail(99), .trackPackage(99)]\``
+In Week 6, I tackled multi-screen navigation and list performance in SwiftUI...`
   }
 ];

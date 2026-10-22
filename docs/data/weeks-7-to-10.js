@@ -1,5 +1,5 @@
 // ============================================================================
-// WEEKS 7 TO 10: Networking/DI, SwiftData/Keychain, Testing/Interop & Capstone
+// WEEKS 7 TO 10: Networking/DI, Persistence, Memory Internals & Capstone
 // ============================================================================
 
 window.WEEKS_7_TO_10 = [
@@ -19,6 +19,94 @@ window.WEEKS_7_TO_10 = [
       { front: "How do you map `snake_case` JSON keys to `camelCase` Swift properties without writing manual `CodingKeys` for every struct?", back: "Set `decoder.keyDecodingStrategy = .convertFromSnakeCase` on your `JSONDecoder()` instance!" },
       { front: "What is the iOS equivalent of an OkHttp `Interceptor` for mocking network responses in unit tests?", back: "Subclassing `URLProtocol` and registering it on a custom `URLSessionConfiguration.ephemeral` (or injecting a `NetworkClient` protocol)." },
       { front: "Why doesn't iOS need bytecode-weaving DI frameworks like Dagger/Hilt?", back: "On Android, the OS instantiates `Activity` via reflection, forcing field/entry-point injection. In SwiftUI, YOU instantiate the root view and ViewModels directly in `@main App`, so standard constructor/initializer injection works cleanly." }
+    ],
+    dailySteps: [
+      {
+        day: 1,
+        title: "URLSession Basics: Fetching Data with async/await",
+        time: "15 mins",
+        goal: "Make your first HTTP GET request using Apple's built-in URLSession without external libraries.",
+        shift: "Retrofit ➔ `URLSession.shared.data(from: url)`. No interface code-gen needed.",
+        details: [
+          "<strong>One-Line Networking:</strong> `let (data, response) = try await URLSession.shared.data(from: url)` fetches data asynchronously and suspends cleanly.",
+          "<strong>Checking Status Codes:</strong> Unlike Retrofit, URLSession doesn't throw on HTTP 404/500 automatically; inspect `(response as? HTTPURLResponse)?.statusCode`."
+        ],
+        kotlinCode: `interface ApiService {
+    @GET("users")
+    suspend fun getUsers(): List<UserDto>
+}`,
+        swiftCode: `let url = URL(string: "https://api.example.com/users")!
+let (data, response) = try await URLSession.shared.data(from: url)
+guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+    throw URLError(.badServerResponse)
+}`
+      },
+      {
+        day: 2,
+        title: "JSON Decoding with Compiler-Synthesized Codable",
+        time: "15 mins",
+        goal: "Decode JSON into Swift structs automatically without boilerplate reflection.",
+        shift: "Moshi / Kotlinx Serialization ➔ Swift `Codable` (typealias for `Encodable & Decodable`).",
+        details: [
+          "<strong>Zero Annotations:</strong> A `struct` conforming to `Codable` automatically knows how to decode itself.",
+          "<strong>Snake-Case Mapping:</strong> Use `decoder.keyDecodingStrategy = .convertFromSnakeCase` to map `user_name` to `userName` without writing custom keys."
+        ],
+        kotlinCode: `@Serializable
+data class GitHubRepo(val id: Int, @SerialName("stargazers_count") val stars: Int)`,
+        swiftCode: `struct GitHubRepo: Codable {
+    let id: Int
+    let stars: Int
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case stars = "stargazers_count"
+    }
+}`
+      },
+      {
+        day: 3,
+        title: "Building a Clean APIClient Wrapper",
+        time: "15 mins",
+        goal: "Create a reusable HTTP service layer that handles authentication headers and JSON decoding.",
+        shift: "OkHttp client configuration ➔ A lightweight Swift service struct or actor.",
+        details: [
+          "Encapsulate URL building, Bearer token injection, and JSONDecoder into a reusable `HTTPClient` protocol."
+        ],
+        kotlinCode: `class NetworkClient(private val okHttp: OkHttpClient)`,
+        swiftCode: `protocol HTTPClient: Sendable {
+    func fetch<T: Decodable>(_ endpoint: String) async throws -> T
+}`
+      },
+      {
+        day: 4,
+        title: "Clean Dependency Injection without Hilt",
+        time: "15 mins",
+        goal: "Inject API services into ViewModels using protocols and initializers.",
+        shift: "Dagger/Hilt `@Inject` ➔ Protocol Constructor Injection + `@Environment`.",
+        details: [
+          "Because you instantiate your ViewModels in `@main App` or parent views, simple initializer injection (`init(client: HTTPClient)`) works cleanly without annotation processors."
+        ],
+        kotlinCode: `@HiltViewModel
+class FeedViewModel @Inject constructor(private val api: ApiService) : ViewModel()`,
+        swiftCode: `@Observable
+@MainActor
+final class FeedViewModel {
+    private let client: any HTTPClient
+    init(client: any HTTPClient = LiveHTTPClient()) { self.client = client }
+}`
+      },
+      {
+        day: 5,
+        title: "Week 7 Project, Quiz & LinkedIn Kit",
+        time: "20 mins",
+        goal: "Build a live API data viewer, complete the networking quiz, and post your reflection.",
+        shift: "Celebrate fetching real data from the web using 100% native Apple APIs.",
+        details: [
+          "Connect a live GitHub or Weather API to your SwiftUI screen and verify decoding."
+        ],
+        kotlinCode: `viewModelScope.launch { val repos = api.getUsers() }`,
+        swiftCode: `.task { await viewModel.loadRepos() }`
+      }
     ],
     concepts: [
       {
@@ -123,7 +211,7 @@ final class RepoViewModel {
         explanation: "This is a vital gotcha for Android developers used to Retrofit! `URLSession` treats any valid HTTP response from the server as a completed network transfer; you validate `httpResponse.statusCode` yourself."
       },
       {
-        question: "3. How can you decode JSON with `snake_case` keys (like `\"created_at\"` and `\"avatar_url\"`) into a Swift struct with `camelCase` properties (`createdAt`, `avatarUrl`) without writing a `CodingKeys` enum?",
+        question: "3. How can you decode JSON with `snake_case` keys into a Swift struct with `camelCase` properties without writing manual `CodingKeys`?",
         options: [
           "Set `decoder.keyDecodingStrategy = .convertFromSnakeCase` on `JSONDecoder`",
           "Use `@SerialName` annotations",
@@ -134,18 +222,7 @@ final class RepoViewModel {
         explanation: "`JSONDecoder.KeyDecodingStrategy.convertFromSnakeCase` automatically transforms snake_case JSON keys into camelCase property names during decoding."
       },
       {
-        question: "4. When you DO define a custom `enum CodingKeys: String, CodingKey` inside a `Codable` struct to rename 1 property out of 5, which cases must you list inside `CodingKeys`?",
-        options: [
-          "Only the 1 renamed property",
-          "All 5 properties that you want encoded/decoded (listing the unchanged ones without a custom raw string value)",
-          "None of them",
-          "Only `String` properties"
-        ],
-        correctIndex: 1,
-        explanation: "Once you declare a custom `CodingKeys` enum, the compiler uses it as the exhaustive list of properties to decode. Unchanged properties are simply listed as `case id, name` alongside `case stars = \"stargazers_count\"`."
-      },
-      {
-        question: "5. Why do most iOS architectures rely on Protocol Initializer Injection + `@Environment` rather than annotation-processor DI frameworks like Dagger/Hilt?",
+        question: "4. Why do most iOS architectures rely on Protocol Initializer Injection + `@Environment` rather than annotation-processor DI frameworks like Dagger/Hilt?",
         options: [
           "Swift does not support classes",
           "In SwiftUI, developers control the entire object initialization graph starting at `@main App`, unlike Android where the OS instantiates `Activity` via reflection",
@@ -156,18 +233,7 @@ final class RepoViewModel {
         explanation: "Because SwiftUI apps construct their own Views and ViewModels directly in code, simple constructor injection and `@Environment` cover DI needs without codegen build penalties."
       },
       {
-        question: "6. How do you intercept and mock low-level `URLSession` requests in unit tests without hitting the real network (similar to OkHttp's `MockWebServer` / `Interceptor`)?",
-        options: [
-          "Subclass `URLProtocol` and register it in `URLSessionConfiguration.ephemeral.protocolClasses`",
-          "Turn off Wi-Fi on the Mac",
-          "Modify `/etc/hosts`",
-          "`URLSession` cannot be mocked"
-        ],
-        correctIndex: 0,
-        explanation: "`URLProtocol` is Foundation's built-in hook for intercepting, inspecting, and returning stubbed `HTTPURLResponse` + `Data` for any `URLSession` configured with it."
-      },
-      {
-        question: "7. What happens if a JSON payload is missing a key (or has `null`) for a property declared as non-optional `let bio: String` in your `Codable` struct?",
+        question: "5. What happens if a JSON payload is missing a key for a property declared as non-optional `let bio: String` in your `Codable` struct?",
         options: [
           "`bio` defaults to `\"\"` automatically",
           "`JSONDecoder().decode(...)` throws a `DecodingError.keyNotFound` or `DecodingError.valueNotFound` error",
@@ -178,50 +244,68 @@ final class RepoViewModel {
         explanation: "Swift's `Decodable` is strictly type-safe: if a field can be missing or `null` in the API response, declare it as an Optional (`let bio: String?`)."
       },
       {
-        question: "8. How do you attach an `Authorization: Bearer <token>` header to an outgoing request in `URLSession`?",
+        question: "6. How do you map a JSON key named `\"created_at_utc\"` to a property named `date` when standard snake_case conversion is not enough?",
         options: [
-          "Create a `var request = URLRequest(url: url)` and call `request.setValue(\"Bearer \\(token)\", forHTTPHeaderField: \"Authorization\")`",
-          "Pass the token in `JSONDecoder()`",
-          "Annotate the struct with `@Header`",
-          "Store it in `UserDefaults`"
-        ],
-        correctIndex: 0,
-        explanation: "`URLRequest` is a mutable value-type `struct` where you configure HTTP method (`request.httpMethod = \"POST\"`), headers, timeout, and body (`request.httpBody`)."
-      },
-      {
-        question: "9. What happens to an in-flight `try await URLSession.shared.data(for: request)` call if the enclosing Swift `Task` (or SwiftUI `.task {}`) is cancelled?",
-        options: [
-          "It keeps downloading until finished",
-          "`URLSession` automatically cancels the underlying network socket transfer and immediately throws `URLError(.cancelled)`",
-          "It leaks the socket",
-          "It retries the request"
+          "Use `@SerializedName(\"created_at_utc\")`",
+          "Define a `private enum CodingKeys: String, CodingKey` inside the struct with `case date = \"created_at_utc\"`",
+          "Override the `init(from decoder:)` by hand only",
+          "It is not possible in Swift"
         ],
         correctIndex: 1,
-        explanation: "`URLSession`'s async methods are integrated with Swift Structured Concurrency and automatically abort the network transfer when the calling `Task` is cancelled."
+        explanation: "Declaring a `CodingKeys: String, CodingKey` enum lets you customize specific key mappings while the compiler generates the rest."
       },
       {
-        question: "10. How do you define a custom `@Environment` key in modern SwiftUI (Xcode 16 / Swift 6) for injecting a service across views?",
+        question: "7. How do you configure a `POST` request with a JSON body using native `URLSession`?",
         options: [
-          "Use the `@Entry` macro inside `extension EnvironmentValues { @Entry var apiClient: any HTTPClient = LiveHTTPClient() }`",
-          "Create an XML file in `res/values`",
-          "Subclass `UIApplication`",
-          "Use global mutable variables"
+          "Pass a dictionary to `URLSession.shared.post(...)`",
+          "Construct a `var request = URLRequest(url: ...)`, set `httpMethod = \"POST\"`, add `\"Content-Type\": \"application/json\"` header, and set `httpBody = try JSONEncoder().encode(payload)`",
+          "Use an XML serializer",
+          "Call `request.setPayload(jsonString)`"
         ],
-        correctIndex: 0,
-        explanation: "The `@Entry` macro on `EnvironmentValues` reduces custom environment key boilerplate to a single line of code!"
+        correctIndex: 1,
+        explanation: "Swift's `URLRequest` allows setting the HTTP method, headers, and `httpBody` bytes encoded directly by `JSONEncoder`."
+      },
+      {
+        question: "8. What does `(data, response)` return when calling `try await URLSession.shared.data(for: request)`?",
+        options: [
+          "A JSON string and an error object",
+          "A tuple containing the raw response bytes (`Data`) and the network metadata (`URLResponse`)",
+          "A parsed dictionary and a status integer",
+          "A stream of websocket packets"
+        ],
+        correctIndex: 1,
+        explanation: "`URLSession.shared.data(...)` returns a 2-tuple: `Data` (raw payload) and `URLResponse` (which can be cast to `HTTPURLResponse` for headers and status code)."
+      },
+      {
+        question: "9. If your API returns ISO-8601 formatted timestamp strings, how do you decode them directly into Swift `Date` objects?",
+        options: [
+          "Write manual regex string parsing for every date",
+          "Set `decoder.dateDecodingStrategy = .iso8601` on your `JSONDecoder` instance",
+          "Convert timestamps to milliseconds first",
+          "Dates must be decoded as Strings first"
+        ],
+        correctIndex: 1,
+        explanation: "Setting `decoder.dateDecodingStrategy = .iso8601` allows `JSONDecoder` to automatically parse ISO date strings into native Swift `Date` values."
+      },
+      {
+        question: "10. What is the recommended way to mock network calls in Swift unit tests without hitting real backend servers?",
+        options: [
+          "Hardcode a 5-second sleep in the app",
+          "Extract the network client into a `protocol APIClientProtocol`, and inject a `MockAPIClient: APIClientProtocol` in your unit tests",
+          "Disable WiFi on the developer's Mac",
+          "Modify the production API endpoint URLs to test localhost"
+        ],
+        correctIndex: 1,
+        explanation: "Protocol-based dependency injection allows seamlessly swapping real networking implementations with mock stubs during tests."
       }
     ],
     codeChallenge: {
       instructions: "Complete the Week 7 Networking Lab: (1) Conform `UserDTO` to `Codable`, (2) Map `fullName` to `\"full_name\"` inside `enum CodingKeys: String, CodingKey`, and (3) Decode using `JSONDecoder()`.",
-      starterCode: `// TODO 1: Conform UserDTO to Codable
-struct UserDTO {
+      starterCode: `struct UserDTO {
     let fullName: String
-
-    // TODO 2: Define enum CodingKeys: String, CodingKey mapping fullName = "full_name"
 }
 
 func parseUser(data: Data) throws -> UserDTO {
-    // TODO 3: Decode UserDTO.self from data using JSONDecoder()
     fatalError("TODO")
 }`,
       solutionCode: `struct UserDTO: Codable {
@@ -243,35 +327,21 @@ func parseUser(data: Data) throws -> UserDTO {
     linkedinPost: `Week 7 of Android -> iOS Before New Year: Why iOS Apps Don't Need Retrofit, Moshi, or Hilt! 🌐🔌
 
 On Android, almost every production app starts by adding Retrofit, OkHttp, Kotlinx Serialization/Moshi, and Hilt.
-When I started building the networking & DI layer on iOS in Week 7, I realized Apple baked all of these into the language and standard library:
+When I built the networking layer in Week 7 on iOS, I was shocked that Apple baked all of these directly into the language and standard library:
 
-1️⃣ Retrofit + OkHttp -> URLSession (with native async/await & task cancellation)
+1️⃣ Retrofit + OkHttp -> URLSession (native async/await & cooperative task cancellation)
 2️⃣ Moshi / Kotlinx Serialization -> Compiler-synthesized Codable (with 1-line .convertFromSnakeCase)
-3️⃣ Dagger / Hilt -> Protocol Initializer Injection + @Environment (@Entry macro)
+3️⃣ Dagger / Hilt -> Protocol Initializer Injection + @Environment
 
-⚠️ Watch out for the #1 Android-to-iOS networking gotcha: URLSession does NOT throw on HTTP 404/500 by default—you must validate (response as? HTTPURLResponse)?.statusCode!
+⚠️ Pro-tip for Android devs: URLSession does NOT throw on HTTP 404/500 by default—you must check (response as? HTTPURLResponse)?.statusCode!
 
-🧪 Try the interactive Codable JSON Playground + 10-question quiz:
-🔗 https://sudhakar-r08.github.io/ios-for-android-devs/
+🔗 Follow my daily steps on GitHub: https://github.com/sudhakar-r08/ios-for-android-devs
+🌐 Tutorial Site: https://sudhakar-r08.github.io/ios-for-android-devs/
 
-#AndroidDev #iOSDev #Swift #Kotlin #MobileArchitecture #CleanArchitecture`,
+#AndroidDev #iOSDev #Swift #Kotlin #MobileArchitecture`,
     linkedinArticle: `# Week 7: Replacing Retrofit, OkHttp, Moshi, and Hilt with First-Party Swift APIs
 
-On Android, our networking and dependency injection stack relies heavily on battle-tested third-party libraries: Retrofit, OkHttp, Kotlinx Serialization (or Moshi), and Hilt.
-
-In Week 7, I built the exact same clean networking and DI architecture on iOS—using **zero external dependencies**.
-
----
-
-## 1. \`URLSession\` + \`Codable\`
-
-Swift's \`Codable\` protocol (\`Encodable & Decodable\`) is built directly into the Swift compiler, generating type-safe JSON parsers at compile time. Combined with \`URLSession.shared.data(for: request)\`, a complete generic REST client takes less than 25 lines of code.
-
----
-
-## 2. Why iOS Doesn't Need Bytecode-Weaving DI
-
-Why do we need Hilt on Android? Because the Android OS instantiates \`Activity\` and \`Service\` classes on our behalf, forcing us to inject dependencies after construction. In SwiftUI, we own the \`@main App\` struct and construct every View and ViewModel ourselves—making pure constructor injection effortless.`
+On Android, our networking and dependency injection stack relies on third-party libraries. In Week 7, I built a clean REST networking and DI architecture using zero external dependencies...`
   },
 
   // ==========================================================================
@@ -286,10 +356,72 @@ Why do we need Hilt on Android? Because the Android OS instantiates \`Activity\`
     iosAnchor: "SwiftData (`@Model`, `@Query`, `ModelContext`), `@AppStorage` (`UserDefaults`), Keychain Services (`SecItemAdd`)",
     simulatorType: "persistence-selector",
     flashcards: [
-      { front: "How does SwiftData's `@Model` macro relate to Room's `@Entity`?", back: "`@Model` transforms a Swift class into a persisted schema managed by `ModelContainer` and `ModelContext` (built on Core Data's proven SQLite engine) and automatically makes it `@Observable`!" },
-      { front: "What does `@Query` do inside a SwiftUI `View`?", back: "It fetches `@Model` records from the environment's `ModelContext` and automatically re-renders the SwiftUI View whenever matching records are inserted, updated, or deleted (like a Room `@Dao` returning `Flow<List<T>>` + `collectAsState`)." },
-      { front: "Why must you NEVER store OAuth tokens or passwords in `UserDefaults` / `@AppStorage`?", back: "`UserDefaults` is stored as an unencrypted `.plist` file inside the app sandbox that can be read from unencrypted device backups. Sensitive secrets must always be stored in the hardware-backed **iOS Keychain**." },
+      { front: "How does SwiftData's `@Model` macro relate to Room's `@Entity`?", back: "`@Model` transforms a Swift class into a persisted schema managed by `ModelContainer` and `ModelContext` (built on Core Data's SQLite engine) and automatically makes it `@Observable`!" },
+      { front: "What does `@Query` do inside a SwiftUI `View`?", back: "It fetches `@Model` records from the environment's `ModelContext` and automatically re-renders the SwiftUI View whenever matching records change (like a Room `@Dao` returning `Flow<List<T>>` + `collectAsState`)." },
+      { front: "Why must you NEVER store OAuth tokens or passwords in `UserDefaults` / `@AppStorage`?", back: "`UserDefaults` is stored as an unencrypted `.plist` file in the app sandbox that can be read from unencrypted backups. Sensitive secrets must always go into the hardware-backed **iOS Keychain**." },
       { front: "What happens to iOS Keychain items vs `UserDefaults` when the user uninstalls your app?", back: "`UserDefaults` is deleted immediately on app uninstall. Keychain items can persist across app reinstalls unless explicitly cleared on first launch!" }
+    ],
+    dailySteps: [
+      {
+        day: 1,
+        title: "Preferences DataStore ➔ @AppStorage (UserDefaults)",
+        time: "15 mins",
+        goal: "Save simple user preferences (dark mode, onboarding complete) in 1 line of code.",
+        shift: "Preferences DataStore ➔ `@AppStorage(\"key\") var isDark = false`.",
+        details: [
+          "`@AppStorage` directly connects a `UserDefaults` key to a SwiftUI view's state."
+        ],
+        kotlinCode: `val IS_ONBOARDED = booleanPreferencesKey("onboarded")`,
+        swiftCode: `@AppStorage("is_onboarded") private var isOnboarded = false`
+      },
+      {
+        day: 2,
+        title: "Room ➔ SwiftData: The @Model Macro",
+        time: "15 mins",
+        goal: "Define a local SQLite schema using Swift classes.",
+        shift: "Room `@Entity` ➔ SwiftData `@Model` class.",
+        details: [
+          "Annotate a Swift class with `@Model`. SwiftData generates tables, indexes, and observation automatically."
+        ],
+        kotlinCode: `@Entity data class Task(@PrimaryKey val id: String, val title: String)`,
+        swiftCode: `@Model final class Task { @Attribute(.unique) var id: String; var title: String; init(id: String, title: String) { self.id = id; self.title = title } }`
+      },
+      {
+        day: 3,
+        title: "Live Database Updates with @Query",
+        time: "15 mins",
+        goal: "Stream live database results straight into a SwiftUI List without writing manual DAOs.",
+        shift: "Room DAO `Flow<List<Task>>` ➔ SwiftData `@Query`.",
+        details: [
+          "`@Query(sort: \\Task.title) private var tasks: [Task]` automatically updates the View when records change."
+        ],
+        kotlinCode: `@Query("SELECT * FROM Task") fun observe(): Flow<List<Task>>`,
+        swiftCode: `@Query(sort: \\Task.title) private var tasks: [Task]`
+      },
+      {
+        day: 4,
+        title: "EncryptedSharedPreferences ➔ iOS Keychain",
+        time: "15 mins",
+        goal: "Safely store sensitive session tokens in the hardware-backed iOS Keychain.",
+        shift: "Android Keystore / EncryptedSharedPreferences ➔ iOS Keychain Services (`Security` framework).",
+        details: [
+          "Never put passwords or API tokens in `UserDefaults`. Use the Keychain for hardware-encrypted storage."
+        ],
+        kotlinCode: `EncryptedSharedPreferences.create(...)`,
+        swiftCode: `// Stored in hardware Secure Enclave via SecItemAdd`
+      },
+      {
+        day: 5,
+        title: "Week 8 Mini-Project, Quiz & LinkedIn Post",
+        time: "20 mins",
+        goal: "Implement local task caching, test your knowledge, and post your reflection.",
+        shift: "Appreciate how SwiftData eliminates separate DAO and Database abstract class boilerplate.",
+        details: [
+          "Save, read, and delete items with `modelContext.insert()` and `modelContext.delete()`."
+        ],
+        kotlinCode: `taskDao.insert(task)`,
+        swiftCode: `modelContext.insert(task)`
+      }
     ],
     concepts: [
       {
@@ -340,8 +472,7 @@ struct BookmarksView: View {
         details: [
           "<strong>When NOT to use `@AppStorage`:</strong> Never store large JSON blobs or sensitive tokens in `UserDefaults`."
         ],
-        kotlinCode: `// Android DataStore
-val ONBOARDED_KEY = booleanPreferencesKey("onboarded")`,
+        kotlinCode: `val ONBOARDED_KEY = booleanPreferencesKey("onboarded")`,
         swiftCode: `struct SettingsView: View {
     @AppStorage("has_completed_onboarding")
     private var hasOnboarded = false
@@ -355,7 +486,7 @@ val ONBOARDED_KEY = booleanPreferencesKey("onboarded")`,
         heading: "3. Android Keystore vs. iOS Keychain Services",
         shift: "Sensitive credentials (JWTs, refresh tokens, biometric keys) belong in the **iOS Keychain** (`Security` framework), which is hardware-encrypted by the Secure Enclave.",
         details: [
-          "<strong>Keychain Accessibility Levels:</strong> Use `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` so tokens are only readable while the device is unlocked and are never migrated to a different device via backup."
+          "<strong>Keychain Accessibility Levels:</strong> Use `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` so tokens are only readable while the device is unlocked."
         ],
         kotlinCode: `// Android: EncryptedSharedPreferences / Keystore cipher wrapping`,
         swiftCode: `// iOS Keychain query dictionary for storing secret Data
@@ -370,39 +501,12 @@ let query: [String: Any] = [
     quiz: [
       {
         question: "1. What macro turns a Swift class into a persistent SwiftData table model (similar to `@Entity` in Room)?",
-        options: [
-          "`@Entity`",
-          "`@Model`",
-          "`@Persistable`",
-          "`@Table`"
-        ],
+        options: ["`@Entity`", "`@Model`", "`@Persistable`", "`@Table`"],
         correctIndex: 1,
         explanation: "The `@Model` macro from `SwiftData` synthesizes schema metadata, persistence tracking, and `@Observable` conformance on your model class."
       },
       {
-        question: "2. How do you enforce that a property (like `id` or `email`) in a SwiftData `@Model` class has a unique constraint (like `@PrimaryKey` or `Index(unique = true)` in Room)?",
-        options: [
-          "`@Attribute(.unique) var id: String`",
-          "`@PrimaryKey var id: String`",
-          "`unique let id: String`",
-          "`@UniqueKey var id: String`"
-        ],
-        correctIndex: 0,
-        explanation: "`@Attribute(.unique)` instructs SwiftData to enforce uniqueness and automatically perform an upsert (insert-or-update) when a duplicate key is saved."
-      },
-      {
-        question: "3. How do you insert or delete a SwiftData `@Model` instance from inside a SwiftUI View?",
-        options: [
-          "Read `@Environment(\\.modelContext) private var context` and call `context.insert(item)` or `context.delete(item)`",
-          "Write raw SQL strings",
-          "Mutate the `@Query` array directly",
-          "Call `UserDefaults.standard.save(item)`"
-        ],
-        correctIndex: 0,
-        explanation: "`ModelContext` (injected via `.modelContainer(for:)` and accessed via `@Environment(\\.modelContext)`) tracks insertions, mutations, and deletions."
-      },
-      {
-        question: "4. Why must OAuth access tokens, refresh tokens, and API secrets be stored in the **iOS Keychain** rather than `UserDefaults` / `@AppStorage`?",
+        question: "2. Why must OAuth access tokens and API secrets be stored in the **iOS Keychain** rather than `UserDefaults` / `@AppStorage`?",
         options: [
           "Because `UserDefaults` cannot store `String` values",
           "Because `UserDefaults` is stored as an unencrypted plaintext `.plist` file in the app sandbox, whereas the Keychain is hardware-encrypted by the Secure Enclave",
@@ -413,77 +517,98 @@ let query: [String: Any] = [
         explanation: "`UserDefaults` is strictly for non-sensitive user preferences. Security tokens and credentials must always be stored in the encrypted iOS Keychain."
       },
       {
-        question: "5. What is a surprising behavior of iOS Keychain items when a user uninstalls and reinstalls your app (compared to Android `EncryptedSharedPreferences`)?",
+        question: "3. What happens to iOS Keychain items when a user uninstalls and reinstalls your app?",
         options: [
           "Keychain items are deleted every time the phone reboots",
-          "Keychain items persist across app uninstalls! Many iOS apps check a `hasLaunchedBefore` flag in `UserDefaults` on startup and wipe stale Keychain tokens on a fresh install",
+          "Keychain items persist across app uninstalls unless explicitly wiped",
           "Keychain items are uploaded to GitHub",
           "Keychain items become public"
         ],
         correctIndex: 1,
-        explanation: "Because Keychain storage lives outside the app bundle sandbox, items remain in Keychain after uninstall unless cleared on first launch detected via `UserDefaults`."
+        explanation: "Because Keychain storage lives outside the app bundle sandbox, items remain in Keychain after uninstall unless cleared on first launch."
       },
       {
-        question: "6. Which Keychain accessibility constant ensures an auth token can ONLY be read when the user's iPhone is unlocked and is NEVER transferred to another device via iCloud/Finder backup?",
+        question: "4. How do you insert or delete a SwiftData `@Model` instance from inside a SwiftUI View?",
         options: [
-          "`kSecAttrAccessibleAlways`",
-          "`kSecAttrAccessibleWhenUnlockedThisDeviceOnly`",
-          "`kSecAttrAccessibleAfterFirstUnlock`",
-          "`kSecAttrAccessiblePublic`"
+          "Read `@Environment(\\.modelContext) private var context` and call `context.insert(item)` or `context.delete(item)`",
+          "Write raw SQL strings",
+          "Mutate the `@Query` array directly",
+          "Call `UserDefaults.standard.save(item)`"
+        ],
+        correctIndex: 0,
+        explanation: "`ModelContext` tracks insertions, mutations, and deletions for SwiftData entities."
+      },
+      {
+        question: "5. How do you stream live database query results directly into a SwiftUI view in SwiftData?",
+        options: [
+          "Call `room.observeAsState()`",
+          "Use the `@Query` property wrapper",
+          "Poll the database with a timer",
+          "Use `@State` only"
         ],
         correctIndex: 1,
-        explanation: "`kSecAttrAccessibleWhenUnlockedThisDeviceOnly` provides the strongest protection for session tokens: hardware-locked when the screen locks and bound strictly to the physical device."
+        explanation: "`@Query` automatically observes SwiftData changes and re-evaluates the view body when matching records are modified."
       },
       {
-        question: "7. How do you filter a SwiftData `@Query` dynamically using type-safe Swift expressions instead of raw SQL strings?",
+        question: "6. How do you define relationships between `@Model` classes in SwiftData (e.g. an `Author` having many `Book`s)?",
         options: [
-          "Using the `#Predicate<Model> { ... }` macro",
-          "Using `NSPredicate(format:)` only",
-          "Using `Regex`",
-          "Filtering is not supported in SwiftData"
+          "By defining foreign key integer columns like in SQLite",
+          "By defining properties that directly reference other `@Model` types (e.g. `var books: [Book] = []`), optionally annotated with `@Relationship(deleteRule: .cascade)`",
+          "By writing SQL JOIN queries in an XML file",
+          "SwiftData does not support one-to-many relationships"
         ],
-        correctIndex: 0,
-        explanation: "Swift's `#Predicate` macro checks property names and types at compile time and translates the Swift closure into an optimized SQLite `WHERE` clause."
+        correctIndex: 1,
+        explanation: "SwiftData manages relationships natively using Swift reference types, allowing cascading delete rules and inverse relationships."
       },
       {
-        question: "8. How do you perform heavy background batch inserts of 10,000 records in SwiftData without freezing the `@MainActor` UI thread?",
+        question: "7. How do you filter and sort records using `@Query` in SwiftData?",
         options: [
-          "Create a background actor annotated with `@ModelActor` (which owns a background `ModelContext`)",
-          "Pass `@MainActor` models across raw `Thread`s",
-          "Use `UserDefaults` instead",
-          "Disable ARC"
+          "Pass raw SQL strings like `\"SELECT * WHERE active = 1 ORDER BY date DESC\"`",
+          "Use `#Predicate<T>` and `SortDescriptor` within the `@Query` initializer: `@Query(filter: #Predicate { $0.isDone == false }, sort: \\.createdDate, order: .reverse)`",
+          "Filter the Swift array manually in memory after loading all records",
+          "Use a regex search string"
         ],
-        correctIndex: 0,
-        explanation: "`@ModelActor` creates a dedicated actor with its own background `ModelContext` bound to the `ModelContainer`, keeping heavy I/O off the main thread safely."
+        correctIndex: 1,
+        explanation: "SwiftData uses type-safe `#Predicate` macros and `SortDescriptor` keypaths, translating them into optimized SQLite queries under the hood."
       },
       {
-        question: "9. Why must SwiftData `@Model` types be declared as `class` rather than `struct`?",
+        question: "8. What is the SwiftUI equivalent of Android's `SharedPreferences` or `DataStore` for simple user settings (e.g., dark mode toggle)?",
         options: [
-          "Because SwiftData tracks object identity and live graph relationships across contexts (similar to an ORM managed entity)",
-          "Because structs cannot have properties",
-          "Because `@Observable` only works on structs",
-          "Because SQLite requires Objective-C"
+          "`@AppStorage` backed by `UserDefaults`",
+          "`@DatabaseState`",
+          "`@MemoryStore`",
+          "`@RoomSetting`"
         ],
         correctIndex: 0,
-        explanation: "Like Core Data managed objects, SwiftData `@Model` instances represent persistent identity in the `ModelContext` object graph and support reference relationships."
+        explanation: "`@AppStorage(\"key\")` reads and writes to `UserDefaults`, automatically triggering view updates whenever the stored value changes."
       },
       {
-        question: "10. What single view modifier do you attach to your root `WindowGroup` or `View` to set up the SwiftData database container for the entire app?",
+        question: "9. Does SwiftData require manual calls to `context.save()` after every record insertion?",
         options: [
-          "`.modelContainer(for: [Bookmark.self])`",
-          "`.database(Room.inMemory())`",
-          "`.environmentObject(SQLite())`",
-          "`.onAppear { initDb() }`"
+          "Yes, data is lost immediately if `save()` is omitted",
+          "No, SwiftData enables autosave by default on the main thread, persisting changes automatically during runloop idle ticks",
+          "It saves only when the phone restarts",
+          "It saves only when the app is backgrounded"
         ],
-        correctIndex: 0,
-        explanation: "`.modelContainer(for:)` initializes the SQLite backing store and injects the `ModelContext` into the SwiftUI environment."
+        correctIndex: 1,
+        explanation: "SwiftData features automatic context saving on the main actor runloop, though explicit `try context.save()` can still be called when immediate disk persistence is required."
+      },
+      {
+        question: "10. How is schema migration handled in SwiftData for non-trivial changes (such as renaming or transforming columns)?",
+        options: [
+          "Uninstalling and reinstalling the app is required",
+          "Using `VersionedSchema` and `SchemaMigrationPlan` to declare explicit migration stages between schema versions",
+          "Editing SQLite files directly with terminal scripts",
+          "SwiftData migrations are purely handled in Xcode project settings"
+        ],
+        correctIndex: 1,
+        explanation: "Complex SwiftData schema transformations use `VersionedSchema` definitions and a `SchemaMigrationPlan` specifying lightweight or custom migration stages."
       }
     ],
     codeChallenge: {
       instructions: "Complete the Week 8 Persistence Lab: (1) Annotate `Habit` with `@Model`, (2) Mark `id` with `@Attribute(.unique)`, and (3) Use `@Query` inside `HabitListView`.",
       starterCode: `import SwiftData
 
-// TODO 1: Add @Model macro and @Attribute(.unique) on id
 final class Habit {
     var id: String
     var name: String
@@ -491,7 +616,6 @@ final class Habit {
 }
 
 struct HabitListView: View {
-    // TODO 2: Declare @Query private var habits: [Habit]
     var habits: [Habit] = []
     var body: some View { List(habits) { h in Text(h.name) } }
 }`,
@@ -514,284 +638,336 @@ struct HabitListView: View {
     },
     linkedinPost: `Week 8 of Android -> iOS Before New Year: Room & DataStore vs SwiftData & Keychain! 💾🔐
 
-How does local storage and security on iOS compare to Android?
+How does local storage on iOS compare to our Android toolkit?
 
-1️⃣ Room (@Entity + @Dao + Flow) -> SwiftData (@Model + #Predicate + @Query)
-In SwiftData, annotating a class with @Model defines the SQLite table, and @Query streams live updates directly into your SwiftUI View—with compile-time type-safe #Predicate queries instead of raw SQL strings!
+1️⃣ Room (@Entity + @Dao + Flow) -> SwiftData (@Model + @Query)
+In SwiftData, annotating a class with @Model defines the SQLite schema, and @Query streams live updates directly into your SwiftUI View—eliminating separate DAO boilerplate!
 
 2️⃣ Preferences DataStore -> @AppStorage ("UserDefaults")
-Great for lightweight flags like dark mode or onboarding—bound to a View in 1 line.
+Great for lightweight flags like dark mode or onboarding in 1 line.
 
-3️⃣ EncryptedSharedPreferences / Keystore -> iOS Keychain Services
-⚠️ Critical iOS Security Gotcha: Never store JWTs/tokens in UserDefaults (it's an unencrypted plist!). Always use the hardware-backed Keychain—and remember that Keychain items survive app uninstalls unless wiped on first launch!
+3️⃣ EncryptedSharedPreferences -> iOS Keychain Services
+⚠️ Never store JWTs/tokens in UserDefaults (it's unencrypted plaintext!). Always use the hardware-backed Keychain.
 
-🎮 Try the interactive iOS Storage Decision Engine + 10-question quiz:
-🔗 https://sudhakar-r08.github.io/ios-for-android-devs/
+🔗 Follow along on GitHub: https://github.com/sudhakar-r08/ios-for-android-devs
+🌐 Tutorial: https://sudhakar-r08.github.io/ios-for-android-devs/
 
 #AndroidDev #iOSDev #SwiftData #RoomDatabase #MobileSecurity #SwiftUI`,
     linkedinArticle: `# Week 8: From Room & DataStore to SwiftData (\`@Model\`, \`@Query\`) and the iOS Keychain
 
-Every production mobile app needs three tiers of local persistence:
-1. **Relational / Structured Graph Data** (Android Room ↔ iOS SwiftData)
-2. **Lightweight Key-Value Preferences** (Android DataStore ↔ iOS \`UserDefaults\` / \`@AppStorage\`)
-3. **Hardware-Backed Secret Storage** (Android Keystore ↔ iOS Keychain Services)
-
-In Week 8, I built all three tiers on iOS and uncovered an important Keychain gotcha: unlike \`UserDefaults\`, **Keychain items persist even after the user uninstalls your app!**`
+Every mobile developer needs local persistence. In Week 8, I explored how iOS handles databases and credentials...`
   },
 
   // ==========================================================================
-  // WEEK 9: SWIFT TESTING (@Test), UIKIT INTEROP & INSTRUMENTS
+  // WEEK 9: MEMORY INTERNALS (ARC, RETAIN CYCLES) & SWIFT TESTING
   // ==========================================================================
   {
     week: 9,
     dates: "Dec 15 – Dec 21",
-    title: "Swift Testing (`@Test`), UIKit Interop & Instruments",
-    subtitle: "Modern Swift Testing (`@Test`, `#expect`), Parameterized Tests, Bridging UIKit (`UIViewRepresentable`), and Profiling with Instruments.",
-    androidAnchor: "JUnit 5 + MockK + Turbine, `AndroidView` (View Interop), Android Studio Profiler",
-    iosAnchor: "Swift Testing (`@Test`, `#expect`, `#require`), `UIViewRepresentable` & `Coordinator`, Xcode Instruments",
-    simulatorType: "interop-lifecycle",
+    title: "Memory Internals (ARC, Retain Cycles) & Swift Testing",
+    subtitle: "Now that you've built real ViewModels and async flows: Under the hood of ARC vs. Garbage Collection, breaking Retain Cycles with `[weak self]`, Copy-on-Write, and modern Swift Testing.",
+    androidAnchor: "ART Tracing GC, LeakCanary, JUnit 5 + MockK, Android Studio Memory Profiler",
+    iosAnchor: "Automatic Reference Counting (ARC), `weak`/`unowned`, `[weak self]`, Swift Testing (`@Test`, `#expect`), Memory Graph Debugger",
+    simulatorType: "arc-and-cow",
     flashcards: [
-      { front: "How does modern Swift Testing (`import Testing`) improve over legacy `XCTest`?", back: "Uses clean `@Test` functions (can live inside `struct`s!), replaces 40+ `XCTAssert*` methods with a single `#expect(...)` macro that prints full values on failure, and runs tests in parallel by default." },
-      { front: "What is `#require(...)` in Swift Testing?", back: "It unwraps an Optional or asserts a precondition inside a `@Test`, immediately aborting the test if it fails (replacing `try XCTUnwrap(...)`)." },
-      { front: "How do you embed a UIKit `UIView` inside SwiftUI (like `AndroidView` in Jetpack Compose)?", back: "Conform a struct to `UIViewRepresentable` and implement `makeUIView(context:)` and `updateUIView(_:context:)`. Use `makeCoordinator()` to bridge UIKit delegates/callbacks back to SwiftUI." },
-      { front: "How do you embed a SwiftUI `View` inside a legacy UIKit `UIViewController` (like `ComposeView` in Android XML)?", back: "Wrap the SwiftUI view in a `UIHostingController(rootView: MySwiftUIView())`." }
+      { front: "How does iOS Automatic Reference Counting (ARC) differ from Android's Garbage Collector?", back: "Android's ART periodically scans object trees from roots to collect unreferenced memory. iOS ARC uses compile-time retain (+1) and release (-1) operations; memory is deallocated the exact instant reference count hits 0." },
+      { front: "What is a Retain Cycle in iOS, and why doesn't the JVM have this issue?", back: "When Object A holds a strong reference to Object B, and Object B holds a strong reference to Object A, their retain counts never hit 0, leaking memory. The JVM's tracing GC can collect cyclic islands as long as they are unreachable from roots." },
+      { front: "How do you break a retain cycle in a Swift closure?", back: "Use a capture list with `[weak self] in` so the closure does not increment the parent's retain count." },
+      { front: "What is Copy-on-Write (CoW) in Swift collections?", back: "Swift structs like `Array` and `Dictionary` share their underlying memory buffer on assignment (`var b = a`). The buffer is only duplicated when one of the copies actually mutates." },
+      { front: "How does modern Swift Testing (`import Testing`) replace legacy XCTest?", back: "Uses `@Test` macros on functions inside value-type `struct`s ( fresh instance per test!) and a single `#expect(...)` assertion macro." }
     ],
-    concepts: [
+    dailySteps: [
       {
-        heading: "1. Modern Swift Testing (`@Test`, `#expect`, `#require`) vs. JUnit 5",
-        shift: "Forget legacy `XCTestCase` subclasses where every method had to start with `func test...()` and used `XCTAssertEqual`. Swift's built-in `Testing` framework uses `@Test` macros, runs on value-type `struct` suites (creating a fresh isolated struct per test!), and supports parameterized tests in 1 line!",
+        day: 1,
+        title: "How ARC Works Under the Hood vs. JVM GC",
+        time: "15 mins",
+        goal: "Understand deterministic deallocation: why deinit runs immediately when retain count hits 0.",
+        shift: "JVM tracing GC sweeps memory at non-deterministic times; Swift ARC deallocates the exact microsecond the last reference drops.",
         details: [
-          "<strong>Value-Type Test Isolation:</strong> Because your test suite is a `struct`, every `@Test` method automatically gets its own clean instance without shared mutable `setUp()` state bugs!",
-          "<strong>Parameterized Tests:</strong> `@Test(arguments: [\"a@b.com\", \"user@domain.org\"]) func validEmail(_ email: String)` runs each input in parallel automatically."
+          "<strong>Deterministic Lifetime:</strong> When a class instance reference goes out of scope, its `deinit` method executes immediately on the current thread.",
+          "<strong>Zero GC Pauses:</strong> ARC eliminates unpredictable Garbage Collector pauses during UI scrolling."
         ],
-        kotlinCode: `class CartTest {
-    @ParameterizedTest
-    @ValueSource(ints = [1, 5, 10])
-    fun \`adding quantity updates total\`(qty: Int) = runTest {
-        val cart = Cart()
-        cart.add(qty)
-        assertEquals(qty, cart.count)
+        kotlinCode: `class MyService {
+    // In Kotlin, finalize() is deprecated and unpredictable
+}`,
+        swiftCode: `class MyService {
+    deinit {
+        print("Deallocated deterministically right now!")
     }
+}`
+      },
+      {
+        day: 2,
+        title: "Retain Cycles & The [weak self] Closure Fix",
+        time: "15 mins",
+        goal: "Identify and eliminate memory leaks between ViewModels and closures.",
+        shift: "On Android, LeakCanary finds activity leaks; in iOS, `[weak self]` in closures prevents leaks at the source.",
+        details: [
+          "<strong>The Retain Cycle:</strong> If a ViewModel holds a closure in a property and that closure captures `self` strongly, neither can ever deallocate.",
+          "<strong>Breaking the Cycle:</strong> Add `[weak self]` in the closure capture list, followed by `guard let self else { return }`."
+        ],
+        kotlinCode: `// Android: Lambda captures this, but tracing GC collects both once screen destroys
+viewModel.onUpdate = { updateUI() }`,
+        swiftCode: `// Swift: [weak self] is essential to break the retain cycle!
+viewModel.onUpdate = { [weak self] in
+    guard let self else { return }
+    self.updateUI()
+}`
+      },
+      {
+        day: 3,
+        title: "Copy-on-Write (CoW) in Swift Collections",
+        time: "15 mins",
+        goal: "Understand how Swift arrays and dictionaries stay fast despite value semantics.",
+        shift: "Assignment `var b = a` is $O(1)$ fast because the underlying heap buffer is shared until a mutation occurs.",
+        details: [
+          "Only when `b.append(...)` is called does Swift copy the buffer to preserve value isolation."
+        ],
+        kotlinCode: `val b = ArrayList(a) // Eager copy in Java/Kotlin`,
+        swiftCode: `var b = a // O(1) shared buffer via Copy-on-Write until mutated!`
+      },
+      {
+        day: 4,
+        title: "Modern Swift Testing: @Test and #expect",
+        time: "15 mins",
+        goal: "Write fast, readable unit tests using Apple's modern Testing framework.",
+        shift: "JUnit 5 `@Test` and `assertEquals` ➔ Swift Testing `@Test` and `#expect(a == b)`.",
+        details: [
+          "<strong>Value-Type Suites:</strong> Test suites are `struct`s, meaning each test runs in a fresh, isolated copy with zero shared state bugs.",
+          "<strong>Single Assertion Macro:</strong> `#expect(...)` captures full comparison diagnostics on failure."
+        ],
+        kotlinCode: `@Test
+fun testCartTotal() {
+    val cart = Cart()
+    assertEquals(0, cart.total)
 }`,
         swiftCode: `import Testing
 
 struct CartTests {
-    @Test("Adding quantity updates total", arguments: [1, 5, 10])
-    func addingQuantity(qty: Int) async throws {
-        var cart = Cart()
-        cart.add(qty)
-        #expect(cart.count == qty)
+    @Test func cartTotalStartsAtZero() {
+        let cart = Cart()
+        #expect(cart.total == 0)
     }
 }`
       },
       {
-        heading: "2. UIKit ↔ SwiftUI Interop (`UIViewRepresentable` & `UIHostingController`)",
-        shift: "Just like Android apps bridge `View` and `Compose` using `AndroidView` and `ComposeView`, iOS apps bridge `UIKit` and `SwiftUI` using `UIViewRepresentable` and `UIHostingController`.",
+        day: 5,
+        title: "Debugging Memory with Xcode Memory Graph",
+        time: "20 mins",
+        goal: "Use Xcode's Debug Memory Graph to spot retain cycles visually, take the quiz, and publish Week 9.",
+        shift: "See your live object graph in 1 click without waiting for an external heap dump.",
         details: [
-          "<strong>The `Coordinator` Pattern:</strong> Many UIKit views (`MKMapView`, `WKWebView`, `UISearchBar`) communicate via delegates (`delegate = self`). Inside `UIViewRepresentable`, you implement `makeCoordinator()` to return a `class` instance that acts as the UIKit delegate and forwards events to your SwiftUI `@Binding`s!"
+          "Click the Debug Memory Graph button in Xcode to see purple exclamation marks for retain cycles.",
+          "Complete the Week 9 lab and publish your memory insights on LinkedIn!"
         ],
-        kotlinCode: `// Android: Wrapping a classic View inside Compose
-AndroidView(
-    factory = { ctx -> WebView(ctx) },
-    update = { webView -> webView.loadUrl(url) }
-)`,
-        swiftCode: `// iOS: Wrapping a UIKit UIView inside SwiftUI
-struct WebViewWrapper: UIViewRepresentable {
-    let url: URL
-
-    func makeUIView(context: Context) -> WKWebView {
-        WKWebView()
-    }
-
-    func updateUIView(_ webView: WKWebView, context: Context) {
-        webView.load(URLRequest(url: url))
-    }
-}`
+        kotlinCode: `// LeakCanary notification on Android`,
+        swiftCode: `// Xcode Debug Memory Graph shows retain cycles visually`
+      }
+    ],
+    concepts: [
+      {
+        heading: "1. Automatic Reference Counting (ARC) vs. Tracing GC",
+        shift: "Swift uses compile-time retain (+1) and release (-1) calls; objects deallocate deterministically at retainCount == 0.",
+        details: [
+          "No GC pauses during smooth scrolling.",
+          "Class instances deallocate immediately when their last strong reference disappears."
+        ],
+        kotlinCode: `class ViewModel { /* Cleaned up by ART tracing GC */ }`,
+        swiftCode: `class ViewModel { deinit { print("Freed immediately!") } }`
       },
       {
-        heading: "3. Profiling Performance & Memory Leaks with Xcode Instruments",
-        shift: "Where Android Studio has the CPU/Memory Profiler and LeakCanary, Xcode provides the **Memory Graph Debugger** (1-click live retain cycle graph!) and **Instruments** (Time Profiler, Allocations, Leaks, SwiftUI View Body tracker).",
+        heading: "2. The Retain Cycle Trap & [weak self]",
+        shift: "Strong reference cycles (`A <-> B`) keep retain counts at 1 forever; break them with `weak var` or `[weak self]`.",
         details: [
-          "<strong>`Self._printChanges()` Debugging Trick:</strong> Inside any SwiftUI View's `var body: some View`, call `let _ = Self._printChanges()` to print to the console the exact `@State` or `@Observable` property that caused that view to re-render!"
+          "`weak` references must always be Optional `var`s because ARC zeroes them out upon deallocation."
         ],
-        kotlinCode: `// Compose Layout Inspector: Recomposition counts`,
-        swiftCode: `var body: some View {
-    // Prints e.g. "ProfileView: @self, _count changed." in Debug console!
-    let _ = Self._printChanges()
-    Text("Count: \\(count)")
-}`
+        kotlinCode: `callback = { this.refresh() }`,
+        swiftCode: `callback = { [weak self] in self?.refresh() }`
+      },
+      {
+        heading: "3. Copy-on-Write (CoW) Performance",
+        shift: "Swift collections share storage buffers until one copy is mutated, combining value safety with pointer speed.",
+        details: [
+          "Assigning large arrays is $O(1)$ fast."
+        ],
+        kotlinCode: `val copy = original.toList()`,
+        swiftCode: `var copy = original // Shared until copy mutates!`
+      },
+      {
+        heading: "4. Modern Swift Testing (`@Test` & `#expect`)",
+        shift: "Replaces legacy XCTestCase with clean value-type struct test suites and rich `#expect` assertions.",
+        details: [
+          "Parameterized tests via `@Test(arguments: [...])` run in parallel by default."
+        ],
+        kotlinCode: `@Test fun verify() { assertEquals(4, 2 + 2) }`,
+        swiftCode: `@Test func verify() { #expect(2 + 2 == 4) }`
       }
     ],
     quiz: [
       {
-        question: "1. In the modern Swift `Testing` framework (`import Testing`), why is declaring a test suite as a `struct` preferred over a `class`?",
+        question: "1. Why does a retain cycle in Swift cause a permanent memory leak, whereas in Java/Kotlin the tracing GC can still collect cyclic objects?",
         options: [
-          "Because structs run on the main thread",
-          "Because value semantics ensure a fresh, completely isolated `struct` instance is created for each individual `@Test` function, preventing accidental shared state between parallel tests",
-          "Because classes cannot use `#expect`",
-          "Because `struct` tests skip compilation"
+          "Because Swift has a smaller heap",
+          "Because ARC relies strictly on reference counts hitting 0; if two objects hold strong references to each other, their counts never hit 0, whereas ART's tracing GC checks reachability from GC roots",
+          "Because classes cannot be deleted in Swift",
+          "Because iOS disables memory management in Release builds"
         ],
         correctIndex: 1,
-        explanation: "With a `struct` test suite, every `@Test` method gets its own independent instance initialized via `init()`, eliminating state leakage across parallel test runs."
+        explanation: "ARC frees memory strictly when an object's retain count reaches 0. If two unreachable objects strongly reference each other, their counts remain at 1 forever unless broken with `weak`."
       },
       {
-        question: "2. What is the difference between `#expect(user != nil)` and `let u = try #require(user)` in Swift Testing?",
+        question: "2. Why must a `weak` reference in Swift always be declared as an Optional `var` (e.g. `weak var delegate: MyDelegate?`)?",
         options: [
-          "`#expect` crashes the test runner",
-          "`#expect` records a failure if false but continues executing the rest of the test; `#require` unwraps the Optional or throws an error that immediately stops the current test if nil",
-          "`#require` is only for UI tests",
-          "They are identical"
+          "Because Swift classes don't support `let`",
+          "Because when the referenced object deallocates, ARC automatically zeroes out the weak reference to `nil` to prevent dangling pointers",
+          "Because weak references are saved to disk",
+          "Only for Objective-C protocols"
         ],
         correctIndex: 1,
-        explanation: "`#require` is the modern replacement for `try XCTUnwrap(...)`: if a precondition or Optional unwrap fails, it aborts the test early so subsequent lines don't fail cascades."
+        explanation: "ARC zeroing weak references mutate the pointer to `nil` when the target is freed, requiring the property to be mutable (`var`) and nullable (`Optional`)."
       },
       {
-        question: "3. Which SwiftUI protocol is the direct equivalent of Jetpack Compose's `AndroidView(factory = ..., update = ...)` for embedding a UIKit `UIView` inside SwiftUI?",
+        question: "3. When passing an escaping closure into a ViewModel or service that references `self`, how do you prevent a retain cycle?",
         options: [
-          "`UIViewRepresentable`",
-          "`UIHostingController`",
-          "`ViewModifier`",
-          "`NSObjectProtocol`"
+          "Use a capture list with `[weak self] in`",
+          "Make the ViewModel a struct",
+          "Call `System.gc()`",
+          "Delete the closure"
         ],
         correctIndex: 0,
-        explanation: "`UIViewRepresentable` bridges any `UIView` into SwiftUI via `makeUIView(context:)` (factory) and `updateUIView(_:context:)` (update)."
+        explanation: "Adding `[weak self] in` to the closure's capture list prevents the closure from holding a strong retain on the enclosing instance."
       },
       {
-        question: "4. Conversely, which class is the direct equivalent of Android's `ComposeView` for embedding a SwiftUI `View` inside an existing UIKit `UIViewController`?",
+        question: "4. In modern Swift Testing (`import Testing`), what is the primary assertion macro used to verify conditions?",
         options: [
-          "`UIHostingController(rootView: MySwiftUIView())`",
-          "`UIViewRepresentable`",
-          "`SwiftUIBridgeView`",
-          "`UINavigationController`"
-        ],
-        correctIndex: 0,
-        explanation: "`UIHostingController` wraps a SwiftUI view hierarchy inside a `UIViewController` so you can adopt SwiftUI screen-by-screen in an existing UIKit codebase."
-      },
-      {
-        question: "5. Inside `UIViewRepresentable`, what is the purpose of `makeCoordinator()` and `context.coordinator`?",
-        options: [
-          "To manage SQLite transactions",
-          "To provide a persistent reference-type (`class`) object that implements UIKit delegates/target-actions and communicates events back to SwiftUI `@Binding`s",
-          "To handle navigation between activities",
-          "To compile Metal shaders"
+          "`XCTAssertEqual(...)`",
+          "`#expect(...)`",
+          "`assert(...)`",
+          "`assertThat(...)`"
         ],
         correctIndex: 1,
-        explanation: "Because `UIViewRepresentable` is a value-type `struct`, it cannot be a UIKit `delegate` (`NSObject`). The `Coordinator` class lives alongside the view and bridges delegate callbacks back to SwiftUI."
+        explanation: "The `#expect(...)` macro is the modern assertion tool in Swift Testing, capturing full expression values on failure."
       },
       {
-        question: "6. How many times does SwiftUI call `makeUIView(context:)` vs. `updateUIView(_:context:)` during the lifetime of a mounted `UIViewRepresentable`?",
+        question: "5. How does Swift's Copy-on-Write (CoW) optimize collection assignments like `var b = a`?",
         options: [
-          "Both are called on every frame",
-          "`makeUIView` is called ONCE when the view is mounted; `updateUIView` is called initially and every time a SwiftUI state dependency read by the wrapper changes",
-          "`updateUIView` is never called",
-          "`makeUIView` is called on every state change"
+          "It compresses the array with gzip",
+          "Both variables share the exact same underlying memory buffer until one of them is mutated, at which point a fresh copy is allocated",
+          "It duplicates the entire array eagerly on the stack",
+          "It converts the array into a linked list"
         ],
         correctIndex: 1,
-        explanation: "Just like `factory` vs `update` in Compose's `AndroidView`, `makeUIView` creates the underlying `UIView` once, while `updateUIView` syncs new SwiftUI state into that existing instance."
+        explanation: "CoW gives you the safety of value semantics with the speed of reference passing by deferring buffer copying until an actual write occurs."
       },
       {
-        question: "7. What built-in debug helper can you place at the top of a SwiftUI `var body: some View` to print the exact property that triggered a view re-evaluation?",
+        question: "6. What is the difference between `unowned` and `weak` in Swift?",
         options: [
-          "`let _ = Self._printChanges()`",
-          "`print(Thread.callStackSymbols)`",
-          "`debugger()`",
-          "`SwiftUI.dumpTree()`"
+          "`unowned` can be used on structs, `weak` cannot",
+          "`weak` becomes `nil` when deallocated (requiring Optional); `unowned` assumes the reference will NEVER outlive the target and crashes if accessed after deallocation",
+          "`unowned` stores data in Keychain",
+          "There is no difference; they are aliases"
         ],
-        correctIndex: 0,
-        explanation: "`let _ = Self._printChanges()` logs which specific `@State`, `@Binding`, or `@Observable` property caused `body` to be recomputed."
+        correctIndex: 1,
+        explanation: "Use `weak` whenever the referenced object can legitimately become `nil`. Use `unowned` only when lifetimes are strictly coupled (like child-parent where parent outlives child)."
       },
       {
-        question: "8. Which Xcode tool lets you pause a running app and visually inspect a graph of all live heap objects and purple `!` warnings for ARC retain cycles?",
+        question: "7. Why do Swift `struct` and `enum` types never suffer from strong reference cycles?",
         options: [
-          "Xcode Debug Memory Graph (`Debug Memory Graph` button in the debug bar)",
-          "Interface Builder",
-          "Swift Package Manager",
-          "Asset Catalog"
+          "Because the compiler bans closures inside structs",
+          "Because value types are copied rather than referenced by pointer; they have no heap identity or retain counts",
+          "Because they are garbage collected by the OS",
+          "Because structs cannot hold references to classes"
         ],
-        correctIndex: 0,
-        explanation: "Xcode's Debug Memory Graph snapshots all live objects on the heap and automatically highlights retain cycles (similar to inspecting a LeakCanary heap dump in real time)."
+        correctIndex: 1,
+        explanation: "Value semantics mean each struct has its own independent value representation, preventing cyclic pointer loops between instances."
       },
       {
-        question: "9. In Xcode Instruments, which template specifically tracks SwiftUI `View.body` evaluation counts and durations alongside Core Animation hitches?",
+        question: "8. What built-in Xcode tool helps you visually identify retain cycles and memory leaks without third-party libraries?",
         options: [
-          "The **SwiftUI** Instrument template (combined with Time Profiler & Hitches)",
-          "Network Instrument",
-          "File Activity Instrument",
-          "Energy Log"
+          "The Xcode Memory Graph Debugger (and Instruments Leaks template)",
+          "The Android Logcat window",
+          "The Terminal top command",
+          "The Git history viewer"
         ],
         correctIndex: 0,
-        explanation: "Instruments includes a dedicated SwiftUI profiler that flags slow or excessive `View.body` evaluations causing frame drops."
+        explanation: "Clicking the 'Debug Memory Graph' button in Xcode pauses execution and visualizes live object references with purple warnings on cycles."
       },
       {
-        question: "10. How do you write a Parameterized Test in Swift Testing that runs the same test function across 4 different inputs?",
+        question: "9. How do you organize related test functions into a suite using modern Swift Testing (Xcode 16+)?",
         options: [
-          "`@Test(arguments: [10, 20, 30, 40]) func validateScore(_ score: Int) { #expect(score > 0) }`",
-          "Write 4 separate functions",
-          "Use `@RunWith(Parameterized.class)`",
-          "Use a global static array"
+          "Subclass `XCTestCase`",
+          "Create a `struct` or `class` annotated with `@Suite(\"Suite Name\")` containing `@Test` functions",
+          "Write tests inside an XML file",
+          "Use `@RunWith(JUnit4::class)`"
         ],
-        correctIndex: 0,
-        explanation: "`@Test(arguments: [...])` natively generates parallel parameterized test cases for every element in the collection."
+        correctIndex: 1,
+        explanation: "Swift Testing uses lightweight value-type structs optionally marked with `@Suite` to organize parallelized test functions."
+      },
+      {
+        question: "10. In Swift Testing, how do you run parameterized test cases across multiple test input arguments?",
+        options: [
+          "Write a `for` loop inside a single test",
+          "Pass an array to the `@Test(arguments: [...])` attribute",
+          "Duplicate the test function 10 times",
+          "Use a CSV file reader"
+        ],
+        correctIndex: 1,
+        explanation: "Swift Testing supports native parameterized testing directly via `@Test(arguments: [input1, input2])` running iterations concurrently."
       }
     ],
     codeChallenge: {
-      instructions: "Complete the Week 9 Testing Lab: (1) Annotate `discountCalculation` with `@Test`, (2) Unwrap `coupon` using `try #require(optionalCoupon)`, and (3) Assert `finalPrice == 80` using `#expect`.",
-      starterCode: `import Testing
+      instructions: "Complete the Week 9 Memory Lab: (1) Break the retain cycle in `DownloadTask` with `weak var manager`, and (2) Write a test using `@Test` and `#expect`.",
+      starterCode: `class DownloadManager {
+    var task: DownloadTask?
+}
 
-struct PricingTests {
-    // TODO 1: Add @Test attribute
-    func discountCalculation() throws {
-        let optionalCoupon: Int? = 20
-        // TODO 2: Unwrap optionalCoupon with 'let coupon = try #require(optionalCoupon)'
-        let coupon = 0
-        let finalPrice = 100 - coupon
-        // TODO 3: Assert with #expect(finalPrice == 80)
-    }
-}`,
-      solutionCode: `import Testing
+class DownloadTask {
+    // TODO 1: Add 'weak' before var manager
+    var manager: DownloadManager?
+}
 
-struct PricingTests {
-    @Test
-    func discountCalculation() throws {
-        let optionalCoupon: Int? = 20
-        let coupon = try #require(optionalCoupon)
-        let finalPrice = 100 - coupon
-        #expect(finalPrice == 80)
-    }
+// TODO 2: Annotate with @Test and assert #expect(1 + 1 == 2)
+func mathTest() {
+    
 }`,
-      simulatedOutput: `◇ Test run started.
-✔ Test discountCalculation() passed after 0.001 seconds (#require & #expect verified!)`,
-      requiredTokens: ["@Test", "#require", "#expect(finalPrice == 80)"]
+      solutionCode: `class DownloadManager {
+    var task: DownloadTask?
+}
+
+class DownloadTask {
+    weak var manager: DownloadManager?
+}
+
+import Testing
+
+@Test
+func mathTest() {
+    #expect(1 + 1 == 2)
+}`,
+      simulatedOutput: `✓ weak var manager breaks retain cycle with DownloadManager
+✓ @Test mathTest() passed with #expect assertion!`,
+      requiredTokens: ["weak var manager", "@Test", "#expect"]
     },
-    linkedinPost: `Week 9 of Android -> iOS Before New Year: Swift Testing (@Test & #expect), UIKit Interop & Instruments! 🧪🔍
+    linkedinPost: `Week 9 of Android -> iOS Before New Year: Memory Internals (ARC vs GC) & Swift Testing! 🧵🧪
 
-How do Testing, Legacy View Interop, and Profiling compare between Android and iOS?
+Now that I've built real ViewModels and async flows in iOS, going under the hood of Swift's memory model was an eye-opener:
 
-1️⃣ JUnit 5 -> Modern Swift Testing (@Test, #expect, #require)
-Because Swift test suites are 'struct's, every @Test function automatically gets a fresh, isolated value instance—zero shared mutable state between parallel tests! And #expect(a == b) replaces 40+ XCTAssert functions with rich expression diagnostics.
+1️⃣ ARC vs JVM Tracing Garbage Collection
+Android's ART scans object trees periodically. iOS uses compile-time reference counting: deinit runs the exact microsecond the retain count hits 0—zero GC pauses during scrolling!
 
-2️⃣ AndroidView & ComposeView -> UIViewRepresentable & UIHostingController
-Need to wrap MKMapView or WKWebView in SwiftUI? Implement UIViewRepresentable (makeUIView + updateUIView + Coordinator). Need to put a SwiftUI screen inside a legacy UIKit app? Wrap it in UIHostingController!
+2️⃣ The Retain Cycle Trap & [weak self]
+If ViewModel owns a closure and the closure captures self strongly, both leak forever. Breaking it with [weak self] is essential muscle memory for any Android dev moving to iOS.
 
-3️⃣ LeakCanary & Layout Inspector -> Xcode Memory Graph Debugger & Self._printChanges()
-Add 'let _ = Self._printChanges()' inside any SwiftUI body to see the exact property that triggered recomposition!
+3️⃣ Swift Testing (@Test & #expect)
+Testing in modern Swift is a breeze: value-type struct test suites mean fresh instances per test, and #expect replaces dozens of XCTAssert methods.
 
-🧪 Try the interactive UIKit-SwiftUI Interop Lifecycle Visualizer + 10-question quiz:
-🔗 https://sudhakar-r08.github.io/ios-for-android-devs/
+🔗 Follow along on GitHub: https://github.com/sudhakar-r08/ios-for-android-devs
+🌐 Tutorial Site: https://sudhakar-r08.github.io/ios-for-android-devs/
 
-#AndroidDev #iOSDev #SwiftTesting #SwiftUI #UIKit #MobileEngineering`,
-    linkedinArticle: `# Week 9: Modern Swift Testing (\`@Test\`, \`#expect\`), Bridging UIKit (\`UIViewRepresentable\`), and Profiling with Instruments
+#AndroidDev #iOSDev #MemoryManagement #SwiftTesting #MobileEngineering`,
+    linkedinArticle: `# Week 9: Under the Hood of iOS Memory — ARC, Retain Cycles, and Modern Swift Testing
 
-No mobile engineer is production-ready without knowing how to write fast unit tests, interop with legacy imperative views, and profile frame drops or memory leaks. In Week 9, I tackled all three on iOS.
-
----
-
-## 1. Why Swift Testing (\`import Testing\`) Is a Joy
-
-Legacy \`XCTest\` felt like JUnit 3—subclassing \`XCTestCase\`, naming methods \`test...\`, and choosing between dozens of \`XCTAssert*\` functions. Modern **Swift Testing** uses Swift macros:
-- \`@Test\` on functions inside a \`struct\` (giving you automatic per-test instance isolation!)
-- \`#expect(cart.total == 42)\` captures both sides of the comparison expression at compile time
-- \`try #require(optionalValue)\` cleanly aborts the test if an Optional is \`nil\``
+On Android, we trust the ART Garbage Collector to clean up circular references. On iOS, understanding Automatic Reference Counting (ARC) is vital to writing leak-free code...`
   },
 
   // ==========================================================================
@@ -811,173 +987,193 @@ Legacy \`XCTest\` felt like JUnit 3—subclassing \`XCTestCase\`, naming methods
       { front: "How do Swift access control levels (`private`, `fileprivate`, `internal`, `package`, `public`, `open`) compare to Kotlin?", back: "`internal` is the default (visible within the same module). To expose a type or method across SPM modules, you must mark it `public` (or `package` for same-package targets). Unlike Kotlin where `public` is the default!" },
       { front: "Difference between `public` and `open` on a Swift class?", back: "Outside the defining module, a `public` class can be instantiated but NOT subclassed or overridden; an `open` class can be both instantiated and subclassed/overridden (similar to Kotlin's `open class`)." }
     ],
+    dailySteps: [
+      {
+        day: 1,
+        title: "Modularizing with Local Swift Packages (SPM)",
+        time: "15 mins",
+        goal: "Break your app into clean local modules using Package.swift (like Gradle subprojects).",
+        shift: "Gradle `:core:model` ➔ Local Swift Package targets in `Package.swift`.",
+        details: [
+          "Local SPM packages prevent massive `.xcodeproj` git merge conflicts and enforce clean feature boundaries.",
+          "Remember: declarations in Swift are `internal` by default; mark public APIs and their initializers `public`."
+        ],
+        kotlinCode: `// settings.gradle.kts: include(":core:model")`,
+        swiftCode: `// Package.swift: .target(name: "CoreModel")`
+      },
+      {
+        day: 2,
+        title: "Build Flavors with .xcconfig and Schemes",
+        time: "15 mins",
+        goal: "Configure Staging vs. Production environments without hardcoded secrets.",
+        shift: "Gradle `productFlavors` ➔ `.xcconfig` files and Xcode Schemes.",
+        details: [
+          "Inject `API_BASE_URL` and bundle ID suffixes cleanly via plain-text `.xcconfig` files."
+        ],
+        kotlinCode: `productFlavors { create("staging") { applicationIdSuffix = ".staging" } }`,
+        swiftCode: `// Staging.xcconfig: PRODUCT_BUNDLE_IDENTIFIER = com.app.staging`
+      },
+      {
+        day: 3,
+        title: "Code Signing, Provisioning & Entitlements",
+        time: "15 mins",
+        goal: "Understand Certificates, Provisioning Profiles, and App Capabilities.",
+        shift: "Android keystore `.jks` ➔ Apple Developer Certificates & Provisioning Profiles.",
+        details: [
+          "A Provisioning Profile cryptographically ties your Certificate, App ID, and Device UDIDs together."
+        ],
+        kotlinCode: `signingConfigs { create("release") { ... } }`,
+        swiftCode: `// Automatically managed by Xcode or configured via Provisioning Profile`
+      },
+      {
+        day: 4,
+        title: "Shipping to TestFlight & App Store Connect",
+        time: "15 mins",
+        goal: "Archive the app and distribute beta builds to internal and external testers.",
+        shift: "Google Play Internal Track ➔ TestFlight.",
+        details: [
+          "Use `Product -> Archive` in Xcode to validate and upload your `.ipa` directly to TestFlight."
+        ],
+        kotlinCode: `// ./gradlew bundleRelease -> Upload to Play Console`,
+        swiftCode: `// Xcode -> Product -> Archive -> Distribute to TestFlight`
+      },
+      {
+        day: 5,
+        title: "Capstone Showcase & 10-Week Retrospective",
+        time: "30 mins",
+        goal: "Celebrate completing the 10-week journey before New Year and publish your final retrospective!",
+        shift: "From Android Developer to proficient dual-platform Mobile Engineer.",
+        details: [
+          "Review your progress, showcase your capstone app, and share your year-end journey on LinkedIn!"
+        ],
+        kotlinCode: `// 10 Weeks Completed!`,
+        swiftCode: `// 10 Weeks Completed!`
+      }
+    ],
     concepts: [
       {
-        heading: "1. Multi-Module Architecture: Gradle Subprojects vs. Local Swift Packages (`Package.swift`)",
-        shift: "In large Android apps, we split code into Gradle modules (`:core:model`, `:core:network`, `:feature:home`). In modern iOS apps, we split features into local **Swift Package Manager (`Package.swift`)** modules—completely avoiding monolithic `.xcodeproj` git merge conflicts!",
+        heading: "1. Multi-Module Architecture: Gradle vs. SPM (`Package.swift`)",
+        shift: "In large Android apps, we split code into Gradle modules (`:core:model`, `:core:network`). In modern iOS apps, we split features into local **Swift Package Manager (`Package.swift`)** modules.",
         details: [
-          "<strong>Default Access Control Gotcha (`internal` vs `public`):</strong> In Kotlin, declarations are `public` by default. In Swift, declarations are `internal` by default! When you move a struct into a separate SPM module, you must mark the struct, its properties, AND its `init()` as `public` (or `package` in Swift 5.9+)."
+          "Declarations in Swift are `internal` by default; remember to declare `public init()` explicitly on public structs."
         ],
-        kotlinCode: `// settings.gradle.kts
-include(":core:model", ":core:network", ":feature:feed")`,
-        swiftCode: `// Package.swift — Clean, declarative Swift code!
-// swift-tools-version: 6.0
-import PackageDescription
-
-let package = Package(
-    name: "AppModules",
-    platforms: [.iOS(.v17)],
-    products: [
-        .library(name: "FeatureFeed", targets: ["FeatureFeed"])
-    ],
-    targets: [
-        .target(name: "CoreModel"),
-        .target(name: "CoreNetwork", dependencies: ["CoreModel"]),
-        .target(name: "FeatureFeed", dependencies: ["CoreModel", "CoreNetwork"]),
-        .testTarget(name: "FeatureFeedTests", dependencies: ["FeatureFeed"])
-    ]
-)`
+        kotlinCode: `// settings.gradle.kts: include(":core:model", ":feature:feed")`,
+        swiftCode: `// Package.swift declarative targets`
       },
       {
-        heading: "2. Gradle `productFlavors` vs. Xcode Schemes & `.xcconfig` Files",
-        shift: "Instead of `productFlavors { create(\"staging\") }` in Gradle, iOS uses plain-text `.xcconfig` (Xcode Configuration) files mapped to Build Configurations (`Debug-Staging`, `Release-Prod`) and Xcode Schemes.",
+        heading: "2. Gradle `productFlavors` vs. Xcode Schemes & `.xcconfig`",
+        shift: "Instead of `productFlavors` in Gradle, iOS uses plain-text `.xcconfig` files mapped to Build Configurations and Xcode Schemes.",
         details: [
-          "<strong>Never Hardcode Secrets in Swift:</strong> Inject environment-specific values (like `API_BASE_URL` and `BUNDLE_ID_SUFFIX`) via `.xcconfig` into `Info.plist` and read them via `Bundle.main.infoDictionary`."
+          "Diff-friendly plain text configuration that avoids modifying project files."
         ],
-        kotlinCode: `productFlavors {
-    create("staging") {
-        applicationIdSuffix = ".staging"
-        buildConfigField("String", "API_URL", "\\"https://staging.api.com\\"")
-    }
-}`,
-        swiftCode: `// Staging.xcconfig
-PRODUCT_BUNDLE_IDENTIFIER = com.sudhakar.app.staging
-PRODUCT_NAME = App (Staging)
-API_BASE_URL = api-staging.example.com`
+        kotlinCode: `productFlavors { create("staging") }`,
+        swiftCode: `// Staging.xcconfig`
       },
       {
-        heading: "3. Code Signing, Provisioning Profiles & TestFlight",
-        shift: "On Android, you sign an APK/AAB with any local `.jks` keystore and upload to Play Console. On iOS, Apple requires hardware-verified **Provisioning Profiles** before an app can even launch on a physical iPhone.",
+        heading: "3. Code Signing & TestFlight Distribution",
+        shift: "Apple's Provisioning Profiles bind Developer Certificates, App IDs, and device permissions for seamless distribution via TestFlight.",
         details: [
-          "<strong>The Signing Triangle:</strong> A **Provisioning Profile** binds together: (1) Your **Certificate** (cryptographic identity in Keychain), (2) The **App ID & Entitlements** (Push Notifications, Associated Domains, App Groups), and (3) Allowed **Device UDIDs** (for Dev/Ad-Hoc).",
-          "<strong>TestFlight & App Store Connect:</strong> Archiving (`Product -> Archive`) uploads your signed `.ipa` to App Store Connect, where **TestFlight** distributes builds to internal testers immediately and up to 10,000 external beta testers."
+          "Distribute builds to up to 10,000 external beta testers via App Store Connect."
         ],
-        kotlinCode: `// Android: ./gradlew bundleRelease -> upload .aab to Play Console Internal Track`,
-        swiftCode: `// CLI Archive & Export for TestFlight / Xcode Cloud:
-// xcodebuild archive -scheme CapstoneApp -archivePath build/App.xcarchive
-// xcodebuild -exportArchive -archivePath build/App.xcarchive ...`
+        kotlinCode: `// Play Console Internal Track`,
+        swiftCode: `// TestFlight beta distribution`
       }
     ],
     quiz: [
       {
-        question: "1. What is the default access control level of a `struct`, `class`, or `func` in Swift (unlike Kotlin where `public` is the default)?",
-        options: [
-          "`private`",
-          "`internal` (visible only within the same module/target)",
-          "`public`",
-          "`open`"
-        ],
+        question: "1. What is the default access control level in Swift (unlike Kotlin where `public` is default)?",
+        options: ["`private`", "`internal`", "`public`", "`open`"],
         correctIndex: 1,
-        explanation: "In Swift, `internal` is the default access level. Furthermore, even if you mark a `struct` as `public` in an SPM module, its synthesized memberwise `init` remains `internal` unless you explicitly write `public init(...)`!"
+        explanation: "Declarations in Swift are `internal` by default, meaning they are visible only within the same module/target."
       },
       {
-        question: "2. Why do you have to explicitly write `public init(...)` on a `public struct` inside a Swift Package module if you want other modules to construct it?",
+        question: "2. Why must you explicitly write `public init(...)` on a `public struct` inside a Swift Package module?",
         options: [
           "Because structs don't have initializers",
-          "Because Swift's compiler-synthesized memberwise initializer for a `struct` is `internal` by default so module authors don't accidentally lock themselves into a public ABI contract",
+          "Because Swift's auto-generated memberwise initializer is `internal` by default to prevent accidental API lock-in",
           "Because SPM doesn't support structs",
-          "Only classes need `public init`"
+          "Only classes need initializers"
         ],
         correctIndex: 1,
-        explanation: "This trips up every developer creating their first Swift Package! A `public struct`'s auto-generated memberwise initializer is `internal`—you must declare `public init(...)` explicitly."
+        explanation: "Even if a struct is marked `public`, its synthesized memberwise initializer is `internal` unless declared `public init(...)` explicitly."
       },
       {
-        question: "3. What is the difference between `public` and `open` on a Swift `class`?",
-        options: [
-          "`open` is for structs; `public` is for classes",
-          "`public` allows other modules to use the class, but ONLY `open` allows other modules to subclass it or override its methods",
-          "They are 100% identical",
-          "`open` makes all properties global"
-        ],
-        correctIndex: 1,
-        explanation: "Just like Kotlin makes classes `final` by default unless marked `open`, Swift prevents cross-module subclassing of a `public class` unless it is explicitly marked `open`."
-      },
-      {
-        question: "4. What is the Swift 5.9+ `package` access control modifier used for?",
-        options: [
-          "Making a symbol visible across multiple targets inside the SAME `Package.swift` without exposing it as `public` to external consumers of the library",
-          "Publishing a package to CocoaPods",
-          "Creating an Android APK package",
-          "Hiding code from unit tests"
-        ],
+        question: "3. What plain-text file format is used by iOS teams to manage build settings like Staging vs Production bundle IDs?",
+        options: ["`.xcconfig`", "`build.gradle.kts`", "`Info.plist` only", "`Package.resolved`"],
         correctIndex: 0,
-        explanation: "`package` access sits right between `internal` (single target) and `public` (world-visible), letting feature and core targets within the same `Package.swift` share APIs cleanly."
+        explanation: "`.xcconfig` files store build settings in clean, diff-friendly plain text."
       },
       {
-        question: "5. What are the 3 core components bound together inside an iOS Development Provisioning Profile?",
+        question: "4. What is Apple's official beta distribution platform integrated into App Store Connect?",
+        options: ["TestFlight", "Xcode Cloud", "CocoaPods", "Play Store"],
+        correctIndex: 0,
+        explanation: "TestFlight lets you distribute signed builds to internal team members and external beta testers."
+      },
+      {
+        question: "5. What are the core components bound together inside an iOS Provisioning Profile?",
         options: [
-          "Gradle, Maven, and ProGuard",
           "Developer Signing Certificate, App ID (Bundle ID + Entitlements), and registered physical Device UDIDs",
+          "Gradle, Maven, and ProGuard",
           "HTML, CSS, and JavaScript",
-          "App Store Screenshots, Privacy Policy, and Price Tier"
-        ],
-        correctIndex: 1,
-        explanation: "An iOS Provisioning Profile cryptographically links Who is signing (Certificate), What app & capabilities are allowed (App ID + Entitlements), and Where it can run (Device UDIDs)."
-      },
-      {
-        question: "6. Which plain-text file format do iOS teams use to manage environment-specific build settings (like Staging vs. Production Bundle IDs and API URLs) outside `.xcodeproj`?",
-        options: [
-          "`.xcconfig` (Xcode Configuration files)",
-          "`build.gradle.kts`",
-          "`local.properties`",
-          "`Podfile.lock`"
+          "Screenshots and price tiers"
         ],
         correctIndex: 0,
-        explanation: "`.xcconfig` files store key-value build settings in diff-friendly plain text that can be assigned to Debug, Staging, and Release configurations."
+        explanation: "A Provisioning Profile cryptographically links the developer certificate, bundle ID capabilities, and allowed device IDs."
       },
       {
-        question: "7. What is an iOS **Entitlements** file (`.entitlements`) equivalent to on Android?",
+        question: "6. What is the difference between `public` and `open` access modifiers in Swift?",
         options: [
-          "`styles.xml`",
-          "Privileged OS-level capability declarations (like Push Notifications `aps-environment`, App Groups, Sign in with Apple, Associated Domains for Universal Links) cryptographically signed by Apple",
-          "`proguard-rules.pro`",
-          "`strings.xml`"
+          "`open` is deprecated in Swift 6",
+          "`public` types can be accessed outside their module but cannot be subclassed or overridden; `open` types can be both accessed and subclassed/overridden outside the module",
+          "`open` makes properties immutable",
+          "`public` is only for structs, `open` is only for enums"
         ],
         correctIndex: 1,
-        explanation: "While `Info.plist` holds general metadata and permission prompt strings (like Camera usage), `.entitlements` declares hardware/cloud capabilities that must match your App ID in the Apple Developer Portal."
+        explanation: "Swift differentiates between consuming a class (`public`) and extending a class (`open`) to prevent unintended subclassing across module boundaries."
       },
       {
-        question: "8. Where do you declare user-facing privacy permission descriptions on iOS (such as why your app needs Camera or Location access, similar to `<uses-permission>` in `AndroidManifest.xml`)?",
+        question: "7. Where are sensitive user permissions (like Camera, Location, and Photo Library access) declared in an iOS app?",
         options: [
-          "Inside `Info.plist` using `NS...UsageDescription` keys (e.g., `NSCameraUsageDescription`)",
-          "Inside `Package.swift`",
-          "Inside `AppDelegate.swift` comments",
-          "iOS does not require permission strings"
-        ],
-        correctIndex: 0,
-        explanation: "If you request Camera or Location access on iOS without the corresponding `NSCameraUsageDescription` / `NSLocationWhenInUseUsageDescription` key in `Info.plist`, iOS terminates the app immediately!"
-      },
-      {
-        question: "9. What is Apple's equivalent to Android App Links (`assetlinks.json`) for opening verified HTTPS web links directly inside your native iOS app?",
-        options: [
-          "**Universal Links** (verified via an `apple-app-site-association` JSON file hosted at `/.well-known/apple-app-site-association` + the Associated Domains entitlement)",
-          "Custom URL Schemes (`myapp://`) only",
-          "`IntentFilter`",
-          "Bluetooth Beacons"
-        ],
-        correctIndex: 0,
-        explanation: "Universal Links pair an `applinks:yourdomain.com` Associated Domains entitlement with `/.well-known/apple-app-site-association` on your HTTPS server."
-      },
-      {
-        question: "10. What happens during App Store Review if your app includes third-party SDKs or uses required-reason APIs (like `UserDefaults` or file timestamps) without a **Privacy Manifest (`PrivacyInfo.xcprivacy`)**?",
-        options: [
-          "Nothing; Apple ignores it",
-          "App Store Connect flags or rejects the binary during upload validation until `PrivacyInfo.xcprivacy` declares the required API reasons and tracking domains",
-          "The app runs slower",
-          "Xcode deletes the project"
+          "In `AndroidManifest.xml` via `<uses-permission>`",
+          "In `Info.plist` with explicit privacy usage descriptions (e.g., `NSCameraUsageDescription`), explaining why the app needs access",
+          "In Xcode Schemes under Build Phase",
+          "Permissions do not need to be declared on iOS"
         ],
         correctIndex: 1,
-        explanation: "Apple enforces `PrivacyInfo.xcprivacy` manifests during App Store Connect submission whenever required-reason APIs (like `UserDefaults` or disk space checks) or common third-party SDKs are present."
+        explanation: "Apple mandates that any protected hardware or user data access include a user-facing explanation key in `Info.plist` or the build will be rejected."
+      },
+      {
+        question: "8. How does TestFlight distinguish between Internal Testing and External Testing?",
+        options: [
+          "Internal testing is paid; External testing is free",
+          "Internal testing is instant for up to 100 registered team members with no Apple review; External testing supports up to 10,000 public testers and requires Apple Beta App Review",
+          "External testing only works over USB cables",
+          "Internal testing is for Android, External is for iOS"
+        ],
+        correctIndex: 1,
+        explanation: "Internal team testers get access immediately upon build upload. External public testing groups require a lightweight Apple Beta App Review for each new version."
+      },
+      {
+        question: "9. How do you integrate third-party dependencies using Swift Package Manager in an Xcode project?",
+        options: [
+          "Add them to `build.gradle` and sync",
+          "Use File > Add Package Dependencies... in Xcode or add them to the `dependencies` block in `Package.swift`",
+          "Copy and paste `.jar` files into a `libs/` folder",
+          "Run `npm install`"
+        ],
+        correctIndex: 1,
+        explanation: "Xcode natively integrates SPM: you can add git repository URLs directly in Xcode or manage them declaratively in `Package.swift`."
+      },
+      {
+        question: "10. What is an App Clip in the iOS ecosystem (similar to Android Instant Apps)?",
+        options: [
+          "A video recording of the user's screen",
+          "A lightweight, focused snippet of an app (under 50MB) that launches instantly via NFC, QR codes, or Safari without installing the full app",
+          "A crash report submitted to Xcode Cloud",
+          "A shortcut icon on the Mac desktop"
+        ],
+        correctIndex: 1,
+        explanation: "App Clips are lightweight app experiences that launch fast when needed (e.g. paying for parking or ordering coffee) without downloading the full app."
       }
     ],
     codeChallenge: {
@@ -985,10 +1181,8 @@ API_BASE_URL = api-staging.example.com`
       starterCode: `import SwiftUI
 import SwiftData
 
-// TODO 1: Add @main and conform CapstoneApp to App
 struct CapstoneApp {
     var body: some Scene {
-        // TODO 2: Attach .modelContainer(for: Bookmark.self) to WindowGroup
         WindowGroup {
             ContentView()
         }
@@ -1007,28 +1201,25 @@ struct CapstoneApp: App {
     }
 }`,
       simulatedOutput: `✓ @main CapstoneApp: App entry point verified
-✓ WindowGroup scene configured with SwiftData .modelContainer(for: Bookmark.self)
-🎉 Congratulations! All 10 Weeks of the Android-to-iOS Academy Completed!`,
+✓ WindowGroup configured with SwiftData .modelContainer(for: Bookmark.self)
+🎉 Congratulations! All 10 Weeks Completed Before New Year!`,
       requiredTokens: ["@main", ": App", "WindowGroup", ".modelContainer(for: Bookmark.self)"]
     },
     linkedinPost: `Week 10: We made it before New Year! 🎉📱🍎
-10 Weeks ago, I was strictly an Android Developer. Today, I’ve completed a full 10-week deep dive into modern iOS engineering (Swift 6, SwiftUI, Swift Concurrency, Actors, SwiftData, Keychain, Swift Testing, and SPM Modular Architecture)—and open-sourced the entire interactive academy!
+10 Weeks ago, I was strictly an Android Developer. Today, I've completed a full 10-week journey into modern iOS engineering (Swift 6, SwiftUI, Concurrency, SwiftData, SPM Modularization, and TestFlight)—and open-sourced the entire academy!
 
-Here is what Week 10 covers for shipping to production:
-1️⃣ Multi-Module Gradle -> Local Swift Packages (Package.swift) & the 'public init' gotcha
+Here is what I learned shipping my capstone app in Week 10:
+1️⃣ Multi-Module Gradle -> Local Swift Packages (Package.swift)
 2️⃣ Product Flavors -> .xcconfig files & Xcode Schemes
-3️⃣ Keystore & Play Console -> Provisioning Profiles, Entitlements, PrivacyInfo.xcprivacy & TestFlight
+3️⃣ Google Play Console -> TestFlight & App Store Connect
 
-🌐 Want to learn iOS through your Android mental models too?
-I built a free, interactive 10-Week Tutorial Website with 100 quiz questions, live memory/layout simulators, flashcards, and hands-on Swift code labs:
-🔗 https://sudhakar-r08.github.io/ios-for-android-devs/
-📂 GitHub Repo: https://github.com/sudhakar-r08/ios-for-android-devs
+🌐 Check out the free, beginner-friendly 10-Week Learning Academy:
+🔗 https://github.com/sudhakar-r08/ios-for-android-devs
+🚀 Live Site: https://sudhakar-r08.github.io/ios-for-android-devs/
 
-#AndroidDev #iOSDev #Swift6 #SwiftUI #Kotlin #JetpackCompose #MobileEngineering #LearningInPublic`,
-    linkedinArticle: `# Week 10: From Android Engineer to Shipping on iOS Before New Year — Multi-Module SPM, Code Signing & Retrospective
+#AndroidDev #iOSDev #Swift6 #SwiftUI #MobileEngineering #LearningInPublic #YearEndChallenge`,
+    linkedinArticle: `# Week 10: From Android Dev to Shipping on iOS Before New Year — The Complete Retrospective
 
-Ten weeks ago, I set a public goal: learn modern iOS development before the New Year by mapping every concept directly to the Android engineering mental models I already knew—and document every week so other mobile developers could follow the same path.
-
-In this final Week 10 article, we cover **Modularization with Swift Package Manager (\`Package.swift\`)**, **Build Flavors with \`.xcconfig\`**, **Code Signing & Provisioning Profiles**, and the biggest lessons from my 10-week journey.`
+Ten weeks ago, I set out to learn iOS development through my Android mental models. Today, I shipped my capstone app...`
   }
 ];

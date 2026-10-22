@@ -4,29 +4,50 @@
 
 const ROSETTA_ITEMS = [
   {
-    category: "Language & Memory",
-    concept: "Data Models",
+    category: "Language & Syntax",
+    concept: "Immutable Constants",
+    android: "val name = \"Alex\"",
+    ios: "let name = \"Alex\"",
+    shift: "Swift uses `let` for immutable bindings and `var` for mutable variables. Kotlin uses `val` and `var`."
+  },
+  {
+    category: "Language & Syntax",
+    concept: "String Interpolation",
+    android: "\"Hello $name (${age + 1})\"",
+    ios: "\"Hello \\(name) (\\(age + 1))\"",
+    shift: "Swift uses backslash and parentheses `\\(expr)` for string templates."
+  },
+  {
+    category: "Language & Syntax",
+    concept: "Function Argument Labels",
+    android: "fun send(to: String, msg: String)",
+    ios: "func send(to recipient: String, message msg: String)",
+    shift: "Swift functions have external labels so call sites read like English sentences: `send(to: user, message: text)`."
+  },
+  {
+    category: "Language & Syntax",
+    concept: "Nullability & Default Values",
+    android: "val title = rawTitle ?: \"Untitled\"",
+    ios: "let title = rawTitle ?? \"Untitled\"",
+    shift: "Kotlin uses Elvis `?:`; Swift uses nil-coalescing `??`. Both use `?` for Optionals."
+  },
+  {
+    category: "Language & Syntax",
+    concept: "Early Exit & Preconditions",
+    android: "val id = orderId ?: return",
+    ios: "guard let id = orderId else { return }",
+    shift: "`guard let` forces an early exit if nil and keeps `id` unwrapped for the rest of the function (the Golden Path)."
+  },
+  {
+    category: "Data Models",
+    concept: "Data Models & Value Semantics",
     android: "data class User(val id: String)",
     ios: "struct User: Equatable, Codable, Sendable { let id: String }",
-    shift: "Kotlin data classes are heap reference types. Swift structs are true value types copied on assignment."
+    shift: "Kotlin data classes are heap reference types. Swift structs are true value types with automatic memberwise initializers."
   },
   {
     category: "Language & Memory",
-    concept: "Memory Management",
-    android: "JVM / ART Tracing Garbage Collector",
-    ios: "ARC (Automatic Reference Counting)",
-    shift: "ARC frees class instances deterministically at retainCount == 0. Break strong cycles with `weak` or `unowned`."
-  },
-  {
-    category: "Language & Memory",
-    concept: "Null / Nil Safety & Early Exit",
-    android: "val u = user ?: return",
-    ios: "guard let u = user else { return }",
-    shift: "`guard let` is compiler-enforced to exit the scope on nil and keeps `u` unwrapped for the rest of the function."
-  },
-  {
-    category: "Language & Memory",
-    concept: "Algebraic State / Sum Types",
+    concept: "Sum Types / Algebraic State",
     android: "sealed interface UiState",
     ios: "enum UiState { case loading, success(Data) }",
     shift: "Swift enums natively hold associated values per case while remaining lightweight value types."
@@ -102,11 +123,11 @@ const ROSETTA_ITEMS = [
     shift: "SwiftData queries bind directly to Views via `@Query`. Store tokens in Keychain, never UserDefaults."
   },
   {
-    category: "Testing & Modularization",
-    concept: "Unit Testing & Modules",
-    android: "JUnit 5 + Multi-Module Gradle",
-    ios: "Swift Testing (@Test, #expect) + Swift Package Manager",
-    shift: "Swift Testing runs on isolated `struct` suites; Local SPM packages (`Package.swift`) eliminate `.xcodeproj` conflicts."
+    category: "Memory & Testing",
+    concept: "Memory Management & Unit Testing",
+    android: "ART Tracing GC & JUnit 5",
+    ios: "ARC (weak/unowned, [weak self]) & Swift Testing (@Test, #expect)",
+    shift: "ARC frees memory deterministically at retainCount == 0 (Week 9). Swift Testing runs on isolated struct test suites."
   }
 ];
 
@@ -118,7 +139,8 @@ const WEEKS_DATA = [
 
 // Persistent App State
 let currentWeekNum = 1;
-let currentTab = "learn"; // "learn" | "practice" | "linkedin" | "rosetta"
+let currentDay = 1; // 1..5 for daily steps; 0 for "All Days"
+let currentTab = "roadmap"; // "roadmap" | "learn" | "practice" | "linkedin" | "rosetta"
 let completedWeeks = JSON.parse(localStorage.getItem("ios_completed_weeks") || "[]");
 let quizAnswers = JSON.parse(localStorage.getItem("ios_quiz_answers_v2") || "{}");
 
@@ -132,6 +154,7 @@ let modifierPaddingFirst = true;
 let observableLastMutated = "none";
 let navStackPath = ["Home"];
 let dispatchChoice = "some";
+let syntaxSelectedDemo = "labels"; // "labels" | "strings" | "guard"
 
 function saveCompletedWeeks() {
   localStorage.setItem("ios_completed_weeks", JSON.stringify(completedWeeks));
@@ -216,7 +239,7 @@ function formatInlineCode(str) {
 
 function getWeekQuizScore(weekNum) {
   const weekObj = WEEKS_DATA.find(w => w.week === weekNum);
-  if (!weekObj) return { correct: 0, answered: 0, total: 0 };
+  if (!weekObj || !weekObj.quiz) return { correct: 0, answered: 0, total: 0 };
   const answers = quizAnswers[weekNum] || {};
   let correct = 0;
   let answered = 0;
@@ -232,8 +255,17 @@ function getWeekQuizScore(weekNum) {
 function renderSidebar() {
   const listEl = document.getElementById("week-nav-list");
   if (!listEl) return;
-  listEl.innerHTML = WEEKS_DATA.map(w => {
-    const isActive = currentTab !== "rosetta" && w.week === currentWeekNum;
+  listEl.innerHTML = `
+    <li>
+      <button class="week-nav-btn ${currentTab === "roadmap" ? "active" : ""}" onclick="selectTab('roadmap')">
+        <div class="week-nav-meta">
+          <span class="week-num">ORIENTATION</span>
+          <span class="week-title">🧭 10-Week Roadmap & Guide</span>
+        </div>
+      </button>
+    </li>
+  ` + WEEKS_DATA.map(w => {
+    const isActive = (currentTab === "learn" || currentTab === "practice" || currentTab === "linkedin") && w.week === currentWeekNum;
     const isDone = completedWeeks.includes(w.week);
     const score = getWeekQuizScore(w.week);
     return `
@@ -255,11 +287,10 @@ function renderSidebar() {
 
 window.selectWeek = function(weekNum) {
   currentWeekNum = weekNum;
+  currentDay = 1;
   flashcardIdx = 0;
   flashcardFlipped = false;
-  if (currentTab === "rosetta") {
-    currentTab = "learn";
-  }
+  currentTab = "learn";
   renderSidebar();
   renderMainContent();
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -268,6 +299,12 @@ window.selectWeek = function(weekNum) {
 window.selectTab = function(tab) {
   currentTab = tab;
   renderSidebar();
+  renderMainContent();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
+
+window.selectDay = function(dayNum) {
+  currentDay = dayNum;
   renderMainContent();
 };
 
@@ -279,9 +316,7 @@ window.copyText = function(btn, encodedText) {
   setTimeout(() => { btn.textContent = orig; }, 1600);
 };
 
-// ============================================================================
-// INTERACTIVE FLASHCARDS ENGINE
-// ============================================================================
+// Flashcards
 window.flipFlashcard = function() {
   flashcardFlipped = !flashcardFlipped;
   renderMainContent();
@@ -326,9 +361,7 @@ function renderFlashcardsSection(weekObj) {
   `;
 }
 
-// ============================================================================
-// INTERACTIVE SIMULATORS PER WEEK
-// ============================================================================
+// Simulators
 window.toggleArcWeak = function(useWeak) { arcUseWeak = useWeak; renderMainContent(); };
 window.toggleArcScope = function(exited) { arcScopeExited = exited; renderMainContent(); };
 window.toggleCowMutation = function(mutated) { cowMutated = mutated; renderMainContent(); };
@@ -343,82 +376,50 @@ window.mutateNavStack = function(action) {
   renderMainContent();
 };
 window.setDispatchChoice = function(choice) { dispatchChoice = choice; renderMainContent(); };
+window.setSyntaxDemo = function(demo) { syntaxSelectedDemo = demo; renderMainContent(); };
 
 function renderInteractiveSimulator(weekObj) {
   if (weekObj.week === 1) {
-    const playlistRc = arcScopeExited ? (arcUseWeak ? 0 : 1) : (arcUseWeak ? 1 : 2);
-    const songRc = arcScopeExited ? (arcUseWeak ? 0 : 1) : 2;
-    const isLeaked = arcScopeExited && !arcUseWeak;
-    const isFreed = arcScopeExited && arcUseWeak;
-
     return `
       <div class="interactive-widget">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.75rem;">
           <div>
-            <h2>🔬 Interactive Lab 1A: ARC Retain Cycle Simulator</h2>
-            <p style="font-size:0.88rem;color:var(--text-secondary);">Toggle between <code>strong</code> and <code>weak var playlist</code> and exit <code>playMusic()</code> to watch ARC reference counts live.</p>
+            <h2>⚡ Interactive Swift Syntax & Function Labels Playground</h2>
+            <p style="font-size:0.88rem;color:var(--text-secondary);">Click each pattern to see how Swift's English-sentence syntax compares directly to Kotlin.</p>
           </div>
           <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
-            <button class="btn ${!arcUseWeak ? "btn-primary" : ""}" onclick="toggleArcWeak(false)">Strong Back-Ref (Leak)</button>
-            <button class="btn ${arcUseWeak ? "btn-primary" : ""}" onclick="toggleArcWeak(true)"><code>weak var playlist</code> (Safe)</button>
-            <button class="btn" onclick="toggleArcScope(${!arcScopeExited})">
-              ${arcScopeExited ? "🔄 Reset Inside playMusic()" : "⏭️ Exit playMusic() Scope"}
-            </button>
+            <button class="btn ${syntaxSelectedDemo === "labels" ? "btn-primary" : ""}" onclick="setSyntaxDemo('labels')">Argument Labels</button>
+            <button class="btn ${syntaxSelectedDemo === "strings" ? "btn-primary" : ""}" onclick="setSyntaxDemo('strings')">String Templates</button>
+            <button class="btn ${syntaxSelectedDemo === "guard" ? "btn-primary" : ""}" onclick="setSyntaxDemo('guard')">guard let Golden Path</button>
           </div>
         </div>
 
-        <div class="arc-nodes">
-          <div class="arc-node ${isLeaked ? "leaked" : ""} ${isFreed ? "freed" : ""}">
-            <div style="font-weight:700;">Playlist (Class)</div>
-            <div style="font-size:0.8rem;color:var(--text-secondary);">var song: Song? (strong)</div>
-            <span class="rc-badge">retainCount = ${playlistRc}</span>
-            <div style="margin-top:0.4rem;font-size:0.8rem;font-weight:600;color:${isLeaked ? "var(--accent-danger)" : isFreed ? "var(--accent-green)" : "var(--accent-primary-text)"};">
-              ${isLeaked ? "❌ MEMORY LEAK (rc=1)" : isFreed ? "✅ deinit called! Freed" : "Alive in scope"}
-            </div>
-          </div>
-
-          <div style="text-align:center;font-family:var(--font-mono);font-size:0.82rem;">
-            <div>Playlist.song ───strong (rc+1)───▶ Song</div>
-            <div style="margin-top:0.45rem;color:${arcUseWeak ? "var(--accent-green)" : "var(--accent-danger)"};">
-              Playlist ◀──${arcUseWeak ? "weak (rc+0)" : "strong (rc+1)"}── Song.playlist
-            </div>
-          </div>
-
-          <div class="arc-node ${isLeaked ? "leaked" : ""} ${isFreed ? "freed" : ""}">
-            <div style="font-weight:700;">Song (Class)</div>
-            <div style="font-size:0.8rem;color:var(--text-secondary);">${arcUseWeak ? "weak " : ""}var playlist: Playlist?</div>
-            <span class="rc-badge">retainCount = ${songRc}</span>
-            <div style="margin-top:0.4rem;font-size:0.8rem;font-weight:600;color:${isLeaked ? "var(--accent-danger)" : isFreed ? "var(--accent-green)" : "var(--accent-primary-text)"};">
-              ${isLeaked ? "❌ MEMORY LEAK (rc=1)" : isFreed ? "✅ deinit called! Freed" : "Alive in scope"}
-            </div>
-          </div>
-        </div>
-
-        <hr style="border:none;border-top:1px solid var(--border-color);margin:1.5rem 0;" />
-
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.75rem;">
-          <div>
-            <h2>🔬 Interactive Lab 1B: Copy-on-Write (CoW) Buffer Visualizer</h2>
-            <p style="font-size:0.88rem;color:var(--text-secondary);">See what happens in memory when you assign <code>var listB = listA</code> vs. when you mutate <code>listB.append(4)</code>.</p>
-          </div>
-          <div style="display:flex;gap:0.5rem;">
-            <button class="btn ${!cowMutated ? "btn-primary" : ""}" onclick="toggleCowMutation(false)">Step 1: <code>var listB = listA</code> (Read-Only)</button>
-            <button class="btn ${cowMutated ? "btn-primary" : ""}" onclick="toggleCowMutation(true)">Step 2: <code>listB.append(4)</code> (Mutate)</button>
-          </div>
-        </div>
-
-        <div class="widget-stage">
-          ${!cowMutated ? `
-            <p style="font-family:var(--font-mono);font-size:0.85rem;">
-              <strong>listA (Stack Struct)</strong> ──┐<br/>
-              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├──▶ <strong>Shared Buffer @ 0x7ffee1 [1, 2, 3]</strong> (Buffer retainCount = 2 · Zero copy cost!)<br/>
-              <strong>listB (Stack Struct)</strong> ──┘
-            </p>
+        <div class="widget-stage" style="font-family:var(--font-mono);font-size:0.85rem;line-height:1.65;">
+          ${syntaxSelectedDemo === "labels" ? `
+            <div style="color:var(--accent-swift);font-weight:700;margin-bottom:0.4rem;">🍎 Swift: External Label + Internal Name</div>
+            <pre style="background:var(--bg-surface);padding:0.75rem;border-radius:6px;border:1px solid var(--border-color);margin:0.5rem 0;"><code>func transfer(amount: Double, from source: Account, to destination: Account) {
+    source.balance -= amount
+    destination.balance += amount
+}
+// Call site reads like natural English:
+transfer(amount: 100, from: checking, to: savings)</code></pre>
+            <div style="color:var(--text-secondary);font-size:0.82rem;">Notice how 'from' and 'to' are used at the call site, while 'source' and 'destination' are used inside the function body!</div>
+          ` : syntaxSelectedDemo === "strings" ? `
+            <div style="color:var(--accent-kotlin);font-weight:700;margin-bottom:0.4rem;">🤖 Kotlin: "$name" vs 🍎 Swift: "\\(name)"</div>
+            <pre style="background:var(--bg-surface);padding:0.75rem;border-radius:6px;border:1px solid var(--border-color);margin:0.5rem 0;"><code>let name = "Sudhakar"
+let experienceYears = 5
+print("Hello \\(name)! Next year you will have \\(experienceYears + 1) years of experience.")
+// Output: Hello Sudhakar! Next year you will have 6 years of experience.</code></pre>
           ` : `
-            <p style="font-family:var(--font-mono);font-size:0.85rem;">
-              <strong>listA (Stack Struct)</strong> ──────▶ <strong>Original Buffer @ 0x7ffee1 [1, 2, 3]</strong> (Untouched! retainCount = 1)<br/><br/>
-              <strong>listB (Stack Struct)</strong> ──────▶ <strong style="color:var(--accent-green);">New Forked Buffer @ 0x9a44b0 [1, 2, 3, 4]</strong> (Copied on mutation!)
-            </p>
+            <div style="color:var(--accent-primary-text);font-weight:700;margin-bottom:0.4rem;">🛡️ guard let: Keep your happy path flat and unindented!</div>
+            <pre style="background:var(--bg-surface);padding:0.75rem;border-radius:6px;border:1px solid var(--border-color);margin:0.5rem 0;"><code>func openProfile(id: String?) {
+    guard let id, !id.isEmpty else {
+        print("Missing user ID!")
+        return // Compiler forces early exit!
+    }
+    // 'id' is a non-optional String for the entire rest of the function:
+    loadUserData(for: id)
+}</code></pre>
           `}
         </div>
       </div>
@@ -528,22 +529,6 @@ ${modifierPaddingFirst
     `;
   }
 
-  if (weekObj.week === 5) {
-    return `
-      <div class="interactive-widget">
-        <div>
-          <h2>🧵 Interactive Swift 6 Concurrency & Actor Isolation Visualizer</h2>
-          <p style="font-size:0.88rem;color:var(--text-secondary);">Compare how Swift 6 handles concurrent calls to an <code>actor</code> vs a <code>@MainActor</code> ViewModel.</p>
-        </div>
-        <div class="widget-stage" style="font-family:var(--font-mono);font-size:0.83rem;line-height:1.7;">
-          <div><strong>[Task 1 - Background]</strong> calls <code>await tokenCache.save("jwt_1")</code> ──▶ Enters <strong>actor TokenCache Serial Mailbox</strong> (Safe!)</div>
-          <div><strong>[Task 2 - Background]</strong> calls <code>await tokenCache.save("jwt_2")</code> ──▶ Suspends at <code>await</code> until Task 1 finishes (Zero Data Race!)</div>
-          <div style="color:var(--accent-primary-text);margin-top:0.35rem;"><strong>[Main Thread]</strong> <code>@MainActor ViewModel</code> updates <code>self.isLoggedIn = true</code> ──▶ Guaranteed on UI Thread at Compile Time!</div>
-        </div>
-      </div>
-    `;
-  }
-
   if (weekObj.week === 6) {
     return `
       <div class="interactive-widget">
@@ -578,12 +563,90 @@ ${modifierPaddingFirst
     `;
   }
 
+  if (weekObj.week === 9) {
+    const playlistRc = arcScopeExited ? (arcUseWeak ? 0 : 1) : (arcUseWeak ? 1 : 2);
+    const songRc = arcScopeExited ? (arcUseWeak ? 0 : 1) : 2;
+    const isLeaked = arcScopeExited && !arcUseWeak;
+    const isFreed = arcScopeExited && arcUseWeak;
+
+    return `
+      <div class="interactive-widget">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.75rem;">
+          <div>
+            <h2>🔬 Interactive Lab 9A: ARC Retain Cycle Simulator</h2>
+            <p style="font-size:0.88rem;color:var(--text-secondary);">Toggle between <code>strong</code> and <code>weak var playlist</code> and exit <code>playMusic()</code> to watch ARC reference counts live.</p>
+          </div>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+            <button class="btn ${!arcUseWeak ? "btn-primary" : ""}" onclick="toggleArcWeak(false)">Strong Back-Ref (Leak)</button>
+            <button class="btn ${arcUseWeak ? "btn-primary" : ""}" onclick="toggleArcWeak(true)"><code>weak var playlist</code> (Safe)</button>
+            <button class="btn" onclick="toggleArcScope(${!arcScopeExited})">
+              ${arcScopeExited ? "🔄 Reset Inside playMusic()" : "⏭️ Exit playMusic() Scope"}
+            </button>
+          </div>
+        </div>
+
+        <div class="arc-nodes">
+          <div class="arc-node ${isLeaked ? "leaked" : ""} ${isFreed ? "freed" : ""}">
+            <div style="font-weight:700;">Playlist (Class)</div>
+            <div style="font-size:0.8rem;color:var(--text-secondary);">var song: Song? (strong)</div>
+            <span class="rc-badge">retainCount = ${playlistRc}</span>
+            <div style="margin-top:0.4rem;font-size:0.8rem;font-weight:600;color:${isLeaked ? "var(--accent-danger)" : isFreed ? "var(--accent-green)" : "var(--accent-primary-text)"};">
+              ${isLeaked ? "❌ MEMORY LEAK (rc=1)" : isFreed ? "✅ deinit called! Freed" : "Alive in scope"}
+            </div>
+          </div>
+
+          <div style="text-align:center;font-family:var(--font-mono);font-size:0.82rem;">
+            <div>Playlist.song ───strong (rc+1)───▶ Song</div>
+            <div style="margin-top:0.45rem;color:${arcUseWeak ? "var(--accent-green)" : "var(--accent-danger)"};">
+              Playlist ◀──${arcUseWeak ? "weak (rc+0)" : "strong (rc+1)"}── Song.playlist
+            </div>
+          </div>
+
+          <div class="arc-node ${isLeaked ? "leaked" : ""} ${isFreed ? "freed" : ""}">
+            <div style="font-weight:700;">Song (Class)</div>
+            <div style="font-size:0.8rem;color:var(--text-secondary);">${arcUseWeak ? "weak " : ""}var playlist: Playlist?</div>
+            <span class="rc-badge">retainCount = ${songRc}</span>
+            <div style="margin-top:0.4rem;font-size:0.8rem;font-weight:600;color:${isLeaked ? "var(--accent-danger)" : isFreed ? "var(--accent-green)" : "var(--accent-primary-text)"};">
+              ${isLeaked ? "❌ MEMORY LEAK (rc=1)" : isFreed ? "✅ deinit called! Freed" : "Alive in scope"}
+            </div>
+          </div>
+        </div>
+
+        <hr style="border:none;border-top:1px solid var(--border-color);margin:1.5rem 0;" />
+
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.75rem;">
+          <div>
+            <h2>🔬 Interactive Lab 9B: Copy-on-Write (CoW) Buffer Visualizer</h2>
+            <p style="font-size:0.88rem;color:var(--text-secondary);">See what happens in memory when you assign <code>var listB = listA</code> vs. when you mutate <code>listB.append(4)</code>.</p>
+          </div>
+          <div style="display:flex;gap:0.5rem;">
+            <button class="btn ${!cowMutated ? "btn-primary" : ""}" onclick="toggleCowMutation(false)">Step 1: <code>var listB = listA</code> (Read-Only)</button>
+            <button class="btn ${cowMutated ? "btn-primary" : ""}" onclick="toggleCowMutation(true)">Step 2: <code>listB.append(4)</code> (Mutate)</button>
+          </div>
+        </div>
+
+        <div class="widget-stage">
+          ${!cowMutated ? `
+            <p style="font-family:var(--font-mono);font-size:0.85rem;">
+              <strong>listA (Stack Struct)</strong> ──┐<br/>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├──▶ <strong>Shared Buffer @ 0x7ffee1 [1, 2, 3]</strong> (Buffer retainCount = 2 · Zero copy cost!)<br/>
+              <strong>listB (Stack Struct)</strong> ──┘
+            </p>
+          ` : `
+            <p style="font-family:var(--font-mono);font-size:0.85rem;">
+              <strong>listA (Stack Struct)</strong> ──────▶ <strong>Original Buffer @ 0x7ffee1 [1, 2, 3]</strong> (Untouched! retainCount = 1)<br/><br/>
+              <strong>listB (Stack Struct)</strong> ──────▶ <strong style="color:var(--accent-green);">New Forked Buffer @ 0x9a44b0 [1, 2, 3, 4]</strong> (Copied on mutation!)
+            </p>
+          `}
+        </div>
+      </div>
+    `;
+  }
+
   return "";
 }
 
-// ============================================================================
-// QUIZ & CODE CHALLENGE ENGINE
-// ============================================================================
+// Quizzes & Code Challenges
 window.answerQuiz = function(weekNum, qIdx, optIdx) {
   const weekObj = WEEKS_DATA.find(w => w.week === weekNum);
   if (!quizAnswers[weekNum]) quizAnswers[weekNum] = {};
@@ -595,7 +658,7 @@ window.answerQuiz = function(weekNum, qIdx, optIdx) {
   }
 
   const score = getWeekQuizScore(weekNum);
-  if (score.correct >= 8 && !completedWeeks.includes(weekNum)) {
+  if (score.correct >= 4 && !completedWeeks.includes(weekNum)) {
     completedWeeks.push(weekNum);
     saveCompletedWeeks();
   } else {
@@ -625,6 +688,7 @@ window.verifyCodeChallenge = function(weekNum) {
       <div><strong>🎉 All Swift Compiler Checks Passed!</strong> Great job applying <code>${weekObj.codeChallenge.requiredTokens.join("</code>, <code>")}</code>.</div>
       ${weekObj.codeChallenge.simulatedOutput ? `<div class="console-output">${escapeHtml(weekObj.codeChallenge.simulatedOutput)}</div>` : ""}
     `;
+    launchConfetti();
     if (!completedWeeks.includes(weekNum)) {
       toggleWeekComplete(weekNum);
     }
@@ -645,8 +709,251 @@ window.showChallengeSolution = function(weekNum) {
 };
 
 // ============================================================================
-// ROSETTA STONE VIEW
+// ROADMAP & ORIENTATION VIEW
 // ============================================================================
+function renderRoadmapView() {
+  return `
+    <div class="hero-card">
+      <span class="pill pill-swift">The Beginner-Friendly 10-Week Journey</span>
+      <h1 style="margin-top:0.55rem;">From Android to iOS: The Master Roadmap</h1>
+      <p>Designed specifically for Android developers. No overwhelming memory theory on Day 1—start with familiar syntax, build real SwiftUI screens early, master architecture, and finish with shipping to TestFlight before New Year.</p>
+    </div>
+
+    <!-- 5 PROGRESSIVE PHASES -->
+    <div class="phase-card">
+      <span class="phase-badge">Phase 1: Speaking Swift (Weeks 1 – 2)</span>
+      <h2>Getting Comfortable with the Language</h2>
+      <p style="color:var(--text-secondary);font-size:0.92rem;">Map your Kotlin muscle memory to Swift without getting overwhelmed by internal runtime mechanics.</p>
+      <div class="phase-weeks-grid">
+        <div class="phase-week-box" onclick="selectWeek(1);">
+          <div>
+            <span class="week-num">Week 1 · Oct 20 - 26</span>
+            <div style="font-weight:700;font-size:1rem;margin:0.25rem 0;">Swift Basics for Android Devs</div>
+            <div style="font-size:0.83rem;color:var(--text-secondary);">Syntax quirks, argument labels, optionals without fear, and simple Structs vs Classes.</div>
+          </div>
+          <div style="margin-top:0.85rem;color:var(--accent-primary-text);font-weight:700;font-size:0.82rem;">Start Week 1 →</div>
+        </div>
+        <div class="phase-week-box" onclick="selectWeek(2);">
+          <div>
+            <span class="week-num">Week 2 · Oct 27 - Nov 02</span>
+            <div style="font-weight:700;font-size:1rem;margin:0.25rem 0;">Protocols, Extensions & Errors</div>
+            <div style="font-size:0.83rem;color:var(--text-secondary);">Kotlin interfaces vs Swift protocols, retroactive extensions, and explicit error handling.</div>
+          </div>
+          <div style="margin-top:0.85rem;color:var(--accent-primary-text);font-weight:700;font-size:0.82rem;">Start Week 2 →</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="phase-card">
+      <span class="phase-badge">Phase 2: First UI & Visual Wins (Weeks 3 – 4)</span>
+      <h2>Building Real UI with SwiftUI</h2>
+      <p style="color:var(--text-secondary);font-size:0.92rem;">Translate your Jetpack Compose knowledge into native iOS screens with instant visual feedback.</p>
+      <div class="phase-weeks-grid">
+        <div class="phase-week-box" onclick="selectWeek(3);">
+          <div>
+            <span class="week-num">Week 3 · Nov 03 - 09</span>
+            <div style="font-weight:700;font-size:1rem;margin:0.25rem 0;">SwiftUI Foundations (Compose ➔ SwiftUI)</div>
+            <div style="font-size:0.83rem;color:var(--text-secondary);">@Composable to View structs, VStack/HStack/ZStack, modifier wrapping order, and Xcode Previews.</div>
+          </div>
+          <div style="margin-top:0.85rem;color:var(--accent-primary-text);font-weight:700;font-size:0.82rem;">Start Week 3 →</div>
+        </div>
+        <div class="phase-week-box" onclick="selectWeek(4);">
+          <div>
+            <span class="week-num">Week 4 · Nov 10 - 16</span>
+            <div style="font-weight:700;font-size:1rem;margin:0.25rem 0;">State Management & @Observable</div>
+            <div style="font-size:0.83rem;color:var(--text-secondary);">remember vs @State, two-way $ bindings, and modern MVVM with the @Observable macro.</div>
+          </div>
+          <div style="margin-top:0.85rem;color:var(--accent-primary-text);font-weight:700;font-size:0.82rem;">Start Week 4 →</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="phase-card">
+      <span class="phase-badge">Phase 3: Real App Architecture (Weeks 5 – 6)</span>
+      <h2>Concurrency, Lists & Multi-Screen Navigation</h2>
+      <div class="phase-weeks-grid">
+        <div class="phase-week-box" onclick="selectWeek(5);">
+          <div>
+            <span class="week-num">Week 5 · Nov 17 - 23</span>
+            <div style="font-weight:700;font-size:1rem;margin:0.25rem 0;">Concurrency, Actors & @MainActor</div>
+            <div style="font-size:0.83rem;color:var(--text-secondary);">Coroutines vs async/await, view lifecycle tasks (.task), and compile-time thread safety with actors.</div>
+          </div>
+          <div style="margin-top:0.85rem;color:var(--accent-primary-text);font-weight:700;font-size:0.82rem;">Start Week 5 →</div>
+        </div>
+        <div class="phase-week-box" onclick="selectWeek(6);">
+          <div>
+            <span class="week-num">Week 6 · Nov 24 - 30</span>
+            <div style="font-weight:700;font-size:1rem;margin:0.25rem 0;">NavigationStack & App Lifecycle</div>
+            <div style="font-size:0.83rem;color:var(--text-secondary);">LazyColumn to List, state-driven NavigationStack backstack, and bottom sheets.</div>
+          </div>
+          <div style="margin-top:0.85rem;color:var(--accent-primary-text);font-weight:700;font-size:0.82rem;">Start Week 6 →</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="phase-card">
+      <span class="phase-badge">Phase 4: Data, Networking & Storage (Weeks 7 – 8)</span>
+      <h2>Real API Integration & Offline Persistence</h2>
+      <div class="phase-weeks-grid">
+        <div class="phase-week-box" onclick="selectWeek(7);">
+          <div>
+            <span class="week-num">Week 7 · Dec 01 - 07</span>
+            <div style="font-weight:700;font-size:1rem;margin:0.25rem 0;">Networking & Codable (No Retrofit Needed!)</div>
+            <div style="font-size:0.83rem;color:var(--text-secondary);">URLSession with async/await, JSON parsing with Codable, and clean protocol DI without Hilt.</div>
+          </div>
+          <div style="margin-top:0.85rem;color:var(--accent-primary-text);font-weight:700;font-size:0.82rem;">Start Week 7 →</div>
+        </div>
+        <div class="phase-week-box" onclick="selectWeek(8);">
+          <div>
+            <span class="week-num">Week 8 · Dec 08 - 14</span>
+            <div style="font-weight:700;font-size:1rem;margin:0.25rem 0;">Room vs. SwiftData & Keychain</div>
+            <div style="font-size:0.83rem;color:var(--text-secondary);">@Model persistence, live @Query streams, @AppStorage, and hardware-backed Keychain security.</div>
+          </div>
+          <div style="margin-top:0.85rem;color:var(--accent-primary-text);font-weight:700;font-size:0.82rem;">Start Week 8 →</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="phase-card">
+      <span class="phase-badge">Phase 5: Under the Hood & Shipping (Weeks 9 – 10)</span>
+      <h2>Memory Internals, Unit Testing & TestFlight</h2>
+      <div class="phase-weeks-grid">
+        <div class="phase-week-box" onclick="selectWeek(9);">
+          <div>
+            <span class="week-num">Week 9 · Dec 15 - 21</span>
+            <div style="font-weight:700;font-size:1rem;margin:0.25rem 0;">Memory Internals (ARC) & Swift Testing</div>
+            <div style="font-size:0.83rem;color:var(--text-secondary);">Now that you know ViewModels: dive into ARC, retain cycles, [weak self], and modern Swift Testing.</div>
+          </div>
+          <div style="margin-top:0.85rem;color:var(--accent-primary-text);font-weight:700;font-size:0.82rem;">Start Week 9 →</div>
+        </div>
+        <div class="phase-week-box" onclick="selectWeek(10);">
+          <div>
+            <span class="week-num">Week 10 · Dec 22 - 31</span>
+            <div style="font-weight:700;font-size:1rem;margin:0.25rem 0;">Capstone App & Shipping to TestFlight</div>
+            <div style="font-size:0.83rem;color:var(--text-secondary);">SPM modularization, .xcconfig flavors, provisioning profiles, and year-end retrospective!</div>
+          </div>
+          <div style="margin-top:0.85rem;color:var(--accent-primary-text);font-weight:700;font-size:0.82rem;">Start Week 10 →</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ANDROID STUDIO TO XCODE SURVIVAL GUIDE -->
+    <div class="section-card">
+      <h2>🛠️ Android Studio ➔ Xcode Survival Guide</h2>
+      <p style="color:var(--text-secondary);margin-bottom:1rem;">Where are all your favorite Android Studio tools inside Apple's Xcode?</p>
+
+      <table class="xcode-guide-table">
+        <thead>
+          <tr>
+            <th>Android Studio (Kotlin / Compose)</th>
+            <th>Apple Xcode (Swift / SwiftUI)</th>
+            <th>What It Does & Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Logcat</strong></td>
+            <td><strong>Debug Console</strong> (<code>Cmd + Shift + Y</code>)</td>
+            <td>Shows <code>print()</code> statements, app logs, and crashes in the bottom drawer.</td>
+          </tr>
+          <tr>
+            <td><strong>Device Manager / Emulator</strong></td>
+            <td><strong>iOS Simulator</strong> (<code>Cmd + R</code>)</td>
+            <td>Launches an ultra-fast, smooth native macOS simulator for any iPhone or iPad.</td>
+          </tr>
+          <tr>
+            <td><strong>Project Tool Window</strong></td>
+            <td><strong>Project Navigator</strong> (<code>Cmd + 1</code>)</td>
+            <td>The file tree on the left side showing Swift files, Assets, and Package dependencies.</td>
+          </tr>
+          <tr>
+            <td><strong>Compose Interactive Preview</strong></td>
+            <td><strong>Xcode Canvas (<code>#Preview</code>)</strong></td>
+            <td>Toggle with <code>Option + Cmd + Enter</code>. Shows live interactive preview of your SwiftUI view.</td>
+          </tr>
+          <tr>
+            <td><strong>build.gradle.kts (Dependencies)</strong></td>
+            <td><strong>Swift Package Manager (SPM)</strong></td>
+            <td>Xcode ➔ File ➔ Add Package Dependencies (or local <code>Package.swift</code>). Zero Gradle daemon lag!</td>
+          </tr>
+          <tr>
+            <td><strong>AndroidManifest.xml</strong></td>
+            <td><strong>Target Settings / Info.plist</strong></td>
+            <td>Click the project root ➔ Targets ➔ Info / Signing & Capabilities for permissions and bundle ID.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- KEYBOARD SHORTCUTS CHEAT SHEET -->
+    <div class="section-card">
+      <h2>⚡ Top 8 Xcode Keyboard Shortcuts for Android Devs</h2>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem;margin-top:0.85rem;">
+        <div style="background:var(--bg-surface-elevated);padding:0.9rem;border-radius:8px;">
+          <kbd class="shortcut-kbd">Cmd + R</kbd>
+          <div style="font-weight:700;margin-top:0.35rem;">Run App</div>
+          <div style="font-size:0.8rem;color:var(--text-secondary);">Android: Control + R</div>
+        </div>
+        <div style="background:var(--bg-surface-elevated);padding:0.9rem;border-radius:8px;">
+          <kbd class="shortcut-kbd">Cmd + B</kbd>
+          <div style="font-weight:700;margin-top:0.35rem;">Build Project</div>
+          <div style="font-size:0.8rem;color:var(--text-secondary);">Android: Cmd + F9</div>
+        </div>
+        <div style="background:var(--bg-surface-elevated);padding:0.9rem;border-radius:8px;">
+          <kbd class="shortcut-kbd">Cmd + Shift + K</kbd>
+          <div style="font-weight:700;margin-top:0.35rem;">Clean Build Folder</div>
+          <div style="font-size:0.8rem;color:var(--text-secondary);">Android: Clean Project</div>
+        </div>
+        <div style="background:var(--bg-surface-elevated);padding:0.9rem;border-radius:8px;">
+          <kbd class="shortcut-kbd">Option + Cmd + Enter</kbd>
+          <div style="font-weight:700;margin-top:0.35rem;">Toggle SwiftUI Canvas</div>
+          <div style="font-size:0.8rem;color:var(--text-secondary);">Android: Split / Preview button</div>
+        </div>
+        <div style="background:var(--bg-surface-elevated);padding:0.9rem;border-radius:8px;">
+          <kbd class="shortcut-kbd">Cmd + Shift + O</kbd>
+          <div style="font-weight:700;margin-top:0.35rem;">Open Quickly (Find File/Symbol)</div>
+          <div style="font-size:0.8rem;color:var(--text-secondary);">Android: Double Shift</div>
+        </div>
+        <div style="background:var(--bg-surface-elevated);padding:0.9rem;border-radius:8px;">
+          <kbd class="shortcut-kbd">Control + I</kbd>
+          <div style="font-weight:700;margin-top:0.35rem;">Re-indent Code Selection</div>
+          <div style="font-size:0.8rem;color:var(--text-secondary);">Android: Option + Cmd + L</div>
+        </div>
+        <div style="background:var(--bg-surface-elevated);padding:0.9rem;border-radius:8px;">
+          <kbd class="shortcut-kbd">Cmd + Shift + Y</kbd>
+          <div style="font-weight:700;margin-top:0.35rem;">Toggle Debug Console</div>
+          <div style="font-size:0.8rem;color:var(--text-secondary);">Android: Alt + 6 (Logcat)</div>
+        </div>
+        <div style="background:var(--bg-surface-elevated);padding:0.9rem;border-radius:8px;">
+          <kbd class="shortcut-kbd">Cmd + /</kbd>
+          <div style="font-weight:700;margin-top:0.35rem;">Toggle Comment (//)</div>
+          <div style="font-size:0.8rem;color:var(--text-secondary);">Identical to Android Studio!</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SWIFT PLAYGROUNDS QUICKSTART -->
+    <div class="section-card">
+      <h2>🚀 Swift Playgrounds in 60 Seconds: Your Scratchpad</h2>
+      <p style="color:var(--text-secondary);margin-bottom:0.75rem;">
+        Don't want to create a whole iOS app just to test a Swift function or algorithm? Use a <strong>Swift Playground</strong> (equivalent to Kotlin Scratch / REPL):
+      </p>
+      <ol class="concept-details-list">
+        <li>Open <strong>Xcode</strong> ➔ Click <strong>File ➔ New ➔ Playground</strong> (or download the standalone <em>Swift Playgrounds</em> app from the Mac App Store).</li>
+        <li>Select <strong>Blank</strong> (iOS or macOS) ➔ Click <strong>Create</strong>.</li>
+        <li>Write your Swift code directly: <code>let names = ["Android", "iOS"]; print(names)</code>.</li>
+        <li>Click the blue <strong>▶ Play button</strong> at the bottom or line gutter to execute instantly!</li>
+      </ol>
+      <div style="margin-top:1.25rem;">
+        <button class="btn btn-primary" onclick="selectWeek(1);">
+          Ready? Start Week 1: Swift Basics for Android Devs →
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+// Rosetta Stone
 function renderRosettaView() {
   return `
     <div class="section-card">
@@ -724,20 +1031,28 @@ function renderMainContent() {
 
   const tabsHtml = `
     <div class="view-tabs">
+      <button class="tab-btn ${currentTab === "roadmap" ? "active" : ""}" onclick="selectTab('roadmap')">
+        🧭 1. Roadmap & Orientation
+      </button>
       <button class="tab-btn ${currentTab === "learn" ? "active" : ""}" onclick="selectTab('learn')">
-        📖 1. Deep-Dive Tutorial & Simulators
+        📖 2. Week ${weekObj.week} Daily Micro-Steps
       </button>
       <button class="tab-btn ${currentTab === "practice" ? "active" : ""}" onclick="selectTab('practice')">
-        🛠️ 2. 10-Question Quiz & Code Lab (${quizScore.correct}/${quizScore.total})
+        🛠️ 3. Practice & Quiz (${quizScore.correct}/${quizScore.total})
       </button>
       <button class="tab-btn ${currentTab === "linkedin" ? "active" : ""}" onclick="selectTab('linkedin')">
-        ✍️ 3. LinkedIn Post & Article Kit
+        ✍️ 4. LinkedIn Kit
       </button>
       <button class="tab-btn ${currentTab === "rosetta" ? "active" : ""}" onclick="selectTab('rosetta')">
-        🗺️ Android ↔ iOS Rosetta Stone
+        🗺️ Rosetta Stone
       </button>
     </div>
   `;
+
+  if (currentTab === "roadmap") {
+    container.innerHTML = tabsHtml + renderRoadmapView();
+    return;
+  }
 
   if (currentTab === "rosetta") {
     container.innerHTML = tabsHtml + renderRosettaView();
@@ -768,43 +1083,115 @@ function renderMainContent() {
   if (currentTab === "learn") {
     bodyHtml += renderInteractiveSimulator(weekObj);
 
-    bodyHtml += weekObj.concepts.map(c => `
-      <div class="section-card">
-        <h2>${formatInlineCode(c.heading)}</h2>
-        <div class="mental-shift-banner">
-          <strong>💡 Key Mental Shift:</strong> ${formatInlineCode(c.shift)}
+    // DAILY MICRO-STEPS SELECTOR
+    if (weekObj.dailySteps && weekObj.dailySteps.length > 0) {
+      bodyHtml += `
+        <div class="day-selector-bar">
+          <span style="font-size:0.75rem;font-weight:800;color:var(--text-muted);text-transform:uppercase;margin-right:0.35rem;">Daily Steps:</span>
+          ${weekObj.dailySteps.map(step => `
+            <button class="day-btn ${currentDay === step.day ? "active" : ""}" onclick="selectDay(${step.day})">
+              Day ${step.day} (${step.time || "15m"})
+            </button>
+          `).join("")}
+          <button class="day-btn ${currentDay === 0 ? "active" : ""}" onclick="selectDay(0)">
+            📚 View All Days
+          </button>
         </div>
-        ${c.details && c.details.length ? `
-          <ul class="concept-details-list">
-            ${c.details.map(d => `<li>${formatInlineCode(d)}</li>`).join("")}
-          </ul>
-        ` : ""}
-        <div class="code-comparison">
-          <div class="code-pane">
-            <div class="code-header code-header-kotlin">
-              <span>🤖 ANDROID (KOTLIN / COMPOSE)</span>
-              <button class="copy-btn" onclick="copyText(this, '${encodeURIComponent(c.kotlinCode)}')">Copy</button>
+      `;
+
+      const stepsToRender = currentDay === 0
+        ? weekObj.dailySteps
+        : weekObj.dailySteps.filter(s => s.day === currentDay);
+
+      bodyHtml += stepsToRender.map(step => `
+        <div class="daily-step-card">
+          <div class="daily-step-header">
+            <div>
+              <span class="pill pill-swift">Day ${step.day} of 5 · ⏱️ ${step.time || "15 mins"}</span>
+              <h2 style="margin-top:0.35rem;">${formatInlineCode(step.title)}</h2>
             </div>
-            <pre class="code-block"><code>${highlightCode(c.kotlinCode)}</code></pre>
           </div>
-          <div class="code-pane">
-            <div class="code-header code-header-swift">
-              <span>🍎 iOS (SWIFT 6 / SWIFTUI)</span>
-              <button class="copy-btn" onclick="copyText(this, '${encodeURIComponent(c.swiftCode)}')">Copy</button>
+          <div class="daily-goal-pill">🎯 Goal: ${formatInlineCode(step.goal)}</div>
+          <div class="mental-shift-banner">
+            <strong>💡 Key Mental Shift:</strong> ${formatInlineCode(step.shift)}
+          </div>
+          ${step.details && step.details.length ? `
+            <ul class="concept-details-list">
+              ${step.details.map(d => `<li>${formatInlineCode(d)}</li>`).join("")}
+            </ul>
+          ` : ""}
+          <div class="code-comparison">
+            <div class="code-pane">
+              <div class="code-header code-header-kotlin">
+                <span>🤖 ANDROID (KOTLIN / COMPOSE)</span>
+                <button class="copy-btn" onclick="copyText(this, '${encodeURIComponent(step.kotlinCode)}')">Copy</button>
+              </div>
+              <pre class="code-block"><code>${highlightCode(step.kotlinCode)}</code></pre>
             </div>
-            <pre class="code-block"><code>${highlightCode(c.swiftCode)}</code></pre>
+            <div class="code-pane">
+              <div class="code-header code-header-swift">
+                <span>🍎 iOS (SWIFT 6 / SWIFTUI)</span>
+                <button class="copy-btn" onclick="copyText(this, '${encodeURIComponent(step.swiftCode)}')">Copy</button>
+              </div>
+              <pre class="code-block"><code>${highlightCode(step.swiftCode)}</code></pre>
+            </div>
+          </div>
+
+          ${currentDay > 0 && currentDay < 5 ? `
+            <div style="display:flex;justify-content:flex-end;margin-top:1.25rem;">
+              <button class="btn btn-primary" onclick="selectDay(${currentDay + 1})">
+                Next: Day ${currentDay + 1} →
+              </button>
+            </div>
+          ` : currentDay === 5 ? `
+            <div style="display:flex;justify-content:flex-end;margin-top:1.25rem;">
+              <button class="btn btn-primary" onclick="selectTab('practice')">
+                Day 5 Done! Take the Week ${weekObj.week} Quiz & Lab →
+              </button>
+            </div>
+          ` : ""}
+        </div>
+      `).join("");
+    } else {
+      // Fallback for full concepts view
+      bodyHtml += weekObj.concepts.map(c => `
+        <div class="section-card">
+          <h2>${formatInlineCode(c.heading)}</h2>
+          <div class="mental-shift-banner">
+            <strong>💡 Key Mental Shift:</strong> ${formatInlineCode(c.shift)}
+          </div>
+          ${c.details && c.details.length ? `
+            <ul class="concept-details-list">
+              ${c.details.map(d => `<li>${formatInlineCode(d)}</li>`).join("")}
+            </ul>
+          ` : ""}
+          <div class="code-comparison">
+            <div class="code-pane">
+              <div class="code-header code-header-kotlin">
+                <span>🤖 ANDROID (KOTLIN / COMPOSE)</span>
+                <button class="copy-btn" onclick="copyText(this, '${encodeURIComponent(c.kotlinCode)}')">Copy</button>
+              </div>
+              <pre class="code-block"><code>${highlightCode(c.kotlinCode)}</code></pre>
+            </div>
+            <div class="code-pane">
+              <div class="code-header code-header-swift">
+                <span>🍎 iOS (SWIFT 6 / SWIFTUI)</span>
+                <button class="copy-btn" onclick="copyText(this, '${encodeURIComponent(c.swiftCode)}')">Copy</button>
+              </div>
+              <pre class="code-block"><code>${highlightCode(c.swiftCode)}</code></pre>
+            </div>
           </div>
         </div>
-      </div>
-    `).join("");
+      `).join("");
+    }
 
     bodyHtml += renderFlashcardsSection(weekObj);
 
     bodyHtml += `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1.5rem;">
-        <span></span>
+        <button class="btn" onclick="selectTab('roadmap')">← Back to Roadmap</button>
         <button class="btn btn-primary" onclick="selectTab('practice')">
-          Next: Take the 10-Question Week ${weekObj.week} Quiz & Code Lab →
+          Next: Take the Week ${weekObj.week} Quiz & Lab →
         </button>
       </div>
     `;
@@ -840,8 +1227,8 @@ function renderMainContent() {
       <div class="section-card">
         <div class="quiz-scoreboard">
           <div>
-            <div class="quiz-score-pill">🏆 Week ${weekObj.week} Quiz Score: ${quizScore.correct} / ${quizScore.total} Correct (${quizScore.answered} Answered)</div>
-            <div style="font-size:0.82rem;color:var(--text-secondary);">Score 8/10 or higher to automatically mark Week ${weekObj.week} complete!</div>
+            <div class="quiz-score-pill">🏆 Week ${weekObj.week} Score: ${quizScore.correct} / ${quizScore.total} Correct (${quizScore.answered} Answered)</div>
+            <div style="font-size:0.82rem;color:var(--text-secondary);">Answer questions correctly to earn +15 XP each and mark the week complete!</div>
           </div>
           <button class="btn" onclick="resetWeekQuiz(${weekObj.week})">🔄 Reset Quiz</button>
         </div>
@@ -849,12 +1236,12 @@ function renderMainContent() {
       </div>
 
       <div class="section-card">
-        <h2>💻 Part 2: Interactive Swift Coding Lab (Week ${weekObj.week})</h2>
+        <h2>💻 Hands-On Coding Lab (Week ${weekObj.week})</h2>
         <p style="color:var(--text-secondary);margin-bottom:1rem;">${weekObj.codeChallenge.instructions}</p>
         <textarea id="challenge-editor" class="code-editor-input" spellcheck="false">${weekObj.codeChallenge.starterCode}</textarea>
         <div style="display:flex;gap:0.75rem;margin-top:0.85rem;flex-wrap:wrap;">
           <button class="btn btn-primary" onclick="verifyCodeChallenge(${weekObj.week})">▶️ Compile & Verify Solution</button>
-          <button class="btn" onclick="showChallengeSolution(${weekObj.week})">👀 Reveal & Run Solution</button>
+          <button class="btn" onclick="showChallengeSolution(${weekObj.week})">👀 Reveal Solution</button>
         </div>
         <div id="challenge-feedback" class="feedback-box"></div>
       </div>

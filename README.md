@@ -31,16 +31,16 @@ Each week pairs **hands-on engineering notes & code** with a **thorough educatio
 
 | Week | Dates | Theme | Android Anchor | Deliverables |
 | :--- | :--- | :--- | :--- | :--- |
-| **Week 1** | Oct 20 – Oct 26 | **Swift Fundamentals & Memory Model** | Kotlin vs. Swift, JVM GC vs. ARC | [Notes](./week-01-kotlin-to-swift/notes.md) · [Code](./week-01-kotlin-to-swift/KotlinVsSwift.swift) · [LinkedIn Article](./week-01-kotlin-to-swift/linkedin-article.md) |
-| **Week 2** | Oct 27 – Nov 02 | **Protocols, Generics & Error Handling** | Interfaces, Sealed Classes, Exceptions | `protocol`, Associated Types, Enums with Associated Values, Typed `throws` |
+| **Week 1** | Oct 20 – Oct 26 | **Swift Basics for Android Developers** | Kotlin vs. Swift (let/var, labels, optionals, basic struct) | [Notes](./week-01-kotlin-to-swift/notes.md) · [Code](./week-01-kotlin-to-swift/KotlinVsSwift.swift) · [Exercise](./week-01-kotlin-to-swift/Week1Exercise.swift) · [LinkedIn Article](./week-01-kotlin-to-swift/linkedin-article.md) |
+| **Week 2** | Oct 27 – Nov 02 | **Protocols, Extensions & Error Handling** | Interfaces, Extension Functions, Exceptions | `protocol`, Protocol Extensions, Retroactive Conformance, `some View`, `do / try / catch` |
 | **Week 3** | Nov 03 – Nov 09 | **SwiftUI Foundations & Layout System** | Jetpack Compose Layouts & Modifiers | `VStack`/`HStack`/`ZStack`, Layout 3-step negotiation, Modifier order sensitivity |
 | **Week 4** | Nov 10 – Nov 16 | **State Management & Observation** | `remember`, `ViewModel`, `collectAsState` | `@State`, `@Binding`, `@Observable`, `@Environment`, View identity & lifecycle |
 | **Week 5** | Nov 17 – Nov 23 | **Swift Concurrency & Actors** | Kotlin Coroutines, Dispatchers, Mutex | `async`/`await`, Structured Concurrency (`TaskGroup`), `Actor`, `@MainActor`, `Sendable` |
 | **Week 6** | Nov 24 – Nov 30 | **Navigation, Lists & App Lifecycle** | `LazyColumn`, `NavHost`, `Activity`/`Application` | `List`, `LazyVStack`, `NavigationStack`, `ScenePhase`, Deep Links |
 | **Week 7** | Dec 01 – Dec 07 | **Networking, Serialization & DI** | Retrofit, Moshi/Kotlinx, Hilt | `URLSession`, `Codable`, Custom `CodingKeys`, Protocol-oriented DI |
 | **Week 8** | Dec 08 – Dec 14 | **Persistence & Security** | Room, DataStore, EncryptedSharedPreferences | `SwiftData` (`@Model`, `@Query`), `UserDefaults`, Keychain Services |
-| **Week 9** | Dec 15 – Dec 21 | **Testing, Interop & Performance** | JUnit/MockK, AndroidView, Layout Inspector | **Swift Testing** (`@Test`, `#expect`), UIKit Interop (`UIViewRepresentable`), Instruments |
-| **Week 10** | Dec 22 – Dec 31 | **Capstone App & App Store Readiness** | Play Console, Gradle Signing, Baseline Profiles | Full Production App, Code Signing/Provisioning, TestFlight & Year-End Retrospective |
+| **Week 9** | Dec 15 – Dec 21 | **Memory Internals (ARC & Retain Cycles) & Swift Testing** | JVM GC vs. ARC, LeakCanary, JUnit 5 | ARC Reference Counting, `[weak self]`, Retain Cycles, Copy-on-Write, **Swift Testing** (`@Test`, `#expect`) |
+| **Week 10** | Dec 22 – Dec 31 | **Capstone App & App Store Readiness** | Play Console, Gradle Signing, Baseline Profiles | Full Production App, Local SPM Architecture, Code Signing/Provisioning, TestFlight |
 
 ---
 
