@@ -1520,9 +1520,9 @@ function renderRosettaView() {
               ${items.map(item => `
                 <tr>
                   <td><strong>${item.concept}</strong></td>
-                  <td><code class="tok-kw">${escapeHtml(item.android)}</code></td>
-                  <td><code class="tok-str">${escapeHtml(item.ios)}</code></td>
-                  <td style="font-size:0.84rem;color:var(--text-secondary);">${formatInlineCode(item.shift)}</td>
+                  <td><code class="code-pill code-pill-android">${escapeHtml(item.android)}</code></td>
+                  <td><code class="code-pill code-pill-ios">${escapeHtml(item.ios)}</code></td>
+                  <td style="font-size:0.86rem;color:var(--text-secondary);">${formatInlineCode(item.shift)}</td>
                 </tr>
               `).join("")}
             </tbody>

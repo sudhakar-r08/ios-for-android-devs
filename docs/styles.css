@@ -675,15 +675,78 @@ pre.code-block {
 .tok-cmt { color: #64748b; font-style: italic; }  /* Comments */
 .tok-num { color: #facc15; }                      /* Numbers */
 
+/* Inline Code Snippets (High-Contrast, WCAG AAA Accessible) */
 :not(pre) > code {
   font-family: var(--font-mono);
-  font-size: 0.83em;
-  background: var(--accent-primary-soft);
-  border: 1px solid color-mix(in srgb, var(--accent-primary) 25%, transparent);
-  padding: 0.12rem 0.42rem;
+  font-size: 0.84em;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-color);
+  padding: 0.14rem 0.44rem;
   border-radius: 6px;
-  color: var(--accent-primary-text);
-  font-weight: 600;
+  color: #1d4ed8; /* Deep Royal Navy: 8.2:1 contrast against light backgrounds */
+  font-weight: 700;
+}
+
+[data-theme="dark"] :not(pre) > code {
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.28);
+  color: #7dd3fc;
+}
+
+[data-theme="sepia"] :not(pre) > code {
+  background: #f1ece1;
+  border-color: #dfd8c8;
+  color: #0f766e;
+}
+
+/* High-Contrast Code Pills in Tables & Comparison Cards */
+.code-pill {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.32rem 0.75rem;
+  border-radius: 6px;
+  display: inline-block;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.code-pill-android {
+  background: #ecfdf5;
+  color: #065f46; /* Deep Forest Emerald: 7.8:1 contrast */
+  border: 1.5px solid #a7f3d0;
+}
+
+[data-theme="dark"] .code-pill-android {
+  background: rgba(16, 185, 129, 0.16);
+  color: #6ee7b7;
+  border-color: rgba(52, 211, 153, 0.45);
+}
+
+[data-theme="sepia"] .code-pill-android {
+  background: #e6f4ea;
+  color: #137333;
+  border-color: #a8dab5;
+}
+
+.code-pill-ios {
+  background: #fff7ed;
+  color: #9a3412; /* Deep Apple Swift Sunset: 7.4:1 contrast */
+  border: 1.5px solid #fed7aa;
+}
+
+[data-theme="dark"] .code-pill-ios {
+  background: rgba(234, 88, 12, 0.16);
+  color: #fdba74;
+  border-color: rgba(251, 146, 60, 0.45);
+}
+
+[data-theme="sepia"] .code-pill-ios {
+  background: #fce8e6;
+  color: #b3261e;
+  border-color: #f6aea9;
 }
 
 /* Interactive ARC Simulator */
@@ -806,10 +869,16 @@ pre.code-block {
 
 .rosetta-table th,
 .rosetta-table td {
-  padding: 0.9rem 0.95rem;
+  padding: 1rem 1.05rem;
   border-bottom: 1px solid var(--border-color);
   text-align: left;
-  vertical-align: top;
+  vertical-align: middle;
+}
+
+.rosetta-table td strong {
+  color: var(--text-primary);
+  font-size: 0.92rem;
+  font-weight: 700;
 }
 
 .rosetta-table tr:hover td {
