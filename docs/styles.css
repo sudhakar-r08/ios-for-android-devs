@@ -1,106 +1,111 @@
 /* ==========================================================================
-   Vibrant Interactive Academy Theme (Brilliant.org / Swift Playgrounds Style)
-   Rich colors, spring animations, 3D flashcards, syntax highlighting & confetti
+   ACADEMIC EDUCATIONAL DESIGN SYSTEM
+   Calibrated for high focus, reading endurance, cognitive flow & WCAG contrast.
+   Based on educational psychology: Harvard / Stanford e-learning & Apple HIG.
    ========================================================================== */
 
 :root,
+[data-theme="academic"],
 [data-theme="aurora"],
 [data-theme="light"] {
-  --bg-primary: #f4f7fb;
+  --bg-primary: #f8fafc;           /* Slate-50: Calm, restful neutral backdrop */
   --bg-secondary: #ffffff;
-  --bg-surface: #ffffff;
-  --bg-surface-elevated: #eef2ff;
-  --bg-code: #0f172a;
-  --bg-code-header: #1e293b;
-  --text-primary: #0f172a;
-  --text-secondary: #334155;
-  --text-muted: #64748b;
+  --bg-surface: #ffffff;           /* Pure white card canvas */
+  --bg-surface-elevated: #f1f5f9;  /* Slate-100: Soft contrast container */
+  --bg-code: #0f172a;              /* Slate-900: High-contrast code background */
+  --bg-code-header: #1e293b;       /* Slate-800: Code window titlebar */
+  --text-primary: #0f172a;         /* Deep slate: 100% readable, zero eye strain */
+  --text-secondary: #334155;       /* Slate-700 */
+  --text-muted: #64748b;           /* Slate-500 */
   --text-code: #f8fafc;
-  --border-color: #e2e8f0;
+  --border-color: #e2e8f0;         /* Slate-200: Crisp 1px border */
   --border-subtle: #f1f5f9;
 
-  /* Vibrant multi-color palette */
-  --accent-primary: #4f46e5;       /* Electric Indigo */
-  --accent-primary-hover: #4338ca;
-  --accent-primary-soft: #e0e7ff;
-  --accent-primary-text: #4338ca;
+  /* Scientifically calibrated educational palette */
+  --accent-primary: #2563eb;       /* Academic Royal Blue: Promotes cognitive focus & calm */
+  --accent-primary-hover: #1d4ed8;
+  --accent-primary-soft: #eff6ff;  /* Blue-50 */
+  --accent-primary-text: #1d4ed8;
 
-  --accent-kotlin: #059669;        /* Vibrant Android Emerald */
-  --accent-kotlin-soft: #d1fae5;
-  --accent-kotlin-border: #6ee7b7;
+  --accent-kotlin: #059669;        /* Android Forest Emerald */
+  --accent-kotlin-soft: #ecfdf5;   /* Emerald-50 */
+  --accent-kotlin-border: #a7f3d0;
 
-  --accent-swift: #ea580c;         /* Warm Swift Coral-Orange */
-  --accent-swift-soft: #ffedd5;
-  --accent-swift-border: #fdba74;
+  --accent-swift: #ea580c;         /* Apple Swift Sunset */
+  --accent-swift-soft: #fff7ed;   /* Orange-50 */
+  --accent-swift-border: #fed7aa;
 
-  --accent-purple: #7c3aed;
-  --accent-purple-soft: #ede9fe;
-  --accent-cyan: #0891b2;
-  --accent-cyan-soft: #cffafe;
-  --accent-amber: #d97706;
+  --accent-purple: #6366f1;        /* Soft Indigo */
+  --accent-purple-soft: #eef2ff;
+  --accent-cyan: #0284c7;
+  --accent-cyan-soft: #f0f9ff;
+  --accent-amber: #d97706;         /* Warm Gold for milestones & XP */
   --accent-amber-soft: #fef3c7;
 
   --accent-green: #10b981;
   --accent-green-soft: #ecfdf5;
-  --accent-danger: #f43f5e;
+  --accent-danger: #e11d48;
   --accent-danger-soft: #fff1f2;
 
-  --gradient-brand: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #ea580c 100%);
-  --gradient-hero: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 45%, #fff7ed 100%);
-  --gradient-shift: linear-gradient(90deg, rgba(124, 58, 237, 0.09), rgba(234, 88, 12, 0.07));
+  /* Cohesive, single-hue gradient & solid surfaces */
+  --gradient-brand: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  --gradient-hero: #ffffff;
+  --gradient-shift: #f8fafc;
 
-  --radius-sm: 10px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
-  --shadow-card: 0 4px 20px -2px rgba(79, 70, 229, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
-  --shadow-hover: 0 14px 30px -5px rgba(79, 70, 229, 0.14), 0 4px 10px -2px rgba(15, 23, 42, 0.05);
-  --spring-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --shadow-card: 0 1px 3px 0 rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
+  --shadow-hover: 0 6px 16px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
+  --spring-ease: cubic-bezier(0.16, 1, 0.3, 1);
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
 }
 
-/* Warm Paper / Reader Theme */
+/* Warm Paper / Reader Theme (Reduces Blue Light Strain) */
 [data-theme="sepia"] {
-  --bg-primary: #f7f4eb;
-  --bg-secondary: #fcfaf5;
+  --bg-primary: #f7f5ee;           /* Warm unbleached paper */
+  --bg-secondary: #fffdf8;
   --bg-surface: #ffffff;
-  --bg-surface-elevated: #f3efe2;
-  --bg-code: #1c1917;
+  --bg-surface-elevated: #f1ece1;
+  --bg-code: #1c1917;              /* Warm stone dark */
   --bg-code-header: #292524;
-  --text-primary: #1c1917;
+  --text-primary: #292524;         /* Stone-800 */
   --text-secondary: #44403c;
   --text-muted: #78716c;
   --text-code: #f5f5f4;
   --border-color: #e7e2d3;
   --border-subtle: #f0ece1;
 
-  --accent-primary: #0d9488;
-  --accent-primary-hover: #0f766e;
-  --accent-primary-soft: #ccfbf1;
+  --accent-primary: #0f766e;       /* Deep Scholar Teal */
+  --accent-primary-hover: #115e59;
+  --accent-primary-soft: #f0fdfa;
   --accent-primary-text: #0f766e;
 
-  --gradient-hero: linear-gradient(135deg, #fef3c7 0%, #e0f2fe 55%, #fce7f3 100%);
+  --gradient-brand: linear-gradient(135deg, #0f766e 0%, #115e59 100%);
+  --gradient-hero: #ffffff;
+  --gradient-shift: #f7f5ee;
 }
 
-/* Midnight Cosmos Theme (Vibrant Dark) */
+/* Midnight Cosmos Theme (Xcode IDE Focus Dark) */
 [data-theme="dark"] {
-  --bg-primary: #0b0f19;
-  --bg-secondary: #111827;
-  --bg-surface: #182235;
-  --bg-surface-elevated: #1e293b;
-  --bg-code: #090d16;
+  --bg-primary: #0d1117;           /* GitHub/Xcode dark slate */
+  --bg-secondary: #161b22;
+  --bg-surface: #1e2430;
+  --bg-surface-elevated: #262c3b;
+  --bg-code: #0b0f19;
   --bg-code-header: #131c2e;
-  --text-primary: #f8fafc;
+  --text-primary: #f0f6fc;
   --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
+  --text-muted: #8b949e;
   --text-code: #f1f5f9;
-  --border-color: rgba(148, 163, 184, 0.18);
-  --border-subtle: rgba(148, 163, 184, 0.1);
+  --border-color: rgba(240, 246, 252, 0.12);
+  --border-subtle: rgba(240, 246, 252, 0.06);
 
-  --accent-primary: #6366f1;
-  --accent-primary-hover: #818cf8;
-  --accent-primary-soft: rgba(99, 102, 241, 0.18);
-  --accent-primary-text: #a5b4fc;
+  --accent-primary: #38bdf8;       /* Calm Sky Blue */
+  --accent-primary-hover: #0ea5e9;
+  --accent-primary-soft: rgba(56, 189, 248, 0.14);
+  --accent-primary-text: #38bdf8;
 
   --accent-kotlin: #34d399;
   --accent-kotlin-soft: rgba(52, 211, 153, 0.15);
@@ -110,9 +115,10 @@
   --accent-swift-soft: rgba(251, 146, 60, 0.15);
   --accent-swift-border: rgba(251, 146, 60, 0.35);
 
-  --gradient-hero: linear-gradient(135deg, rgba(79, 70, 229, 0.22) 0%, rgba(124, 58, 237, 0.18) 50%, rgba(234, 88, 12, 0.18) 100%);
-  --gradient-shift: linear-gradient(90deg, rgba(99, 102, 241, 0.16), rgba(251, 146, 60, 0.12));
-  --shadow-card: 0 8px 28px rgba(0, 0, 0, 0.35);
+  --gradient-brand: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  --gradient-hero: #161b22;
+  --gradient-shift: #1e2430;
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.35);
 }
 
 *, *::before, *::after {
@@ -128,18 +134,13 @@ html {
 body {
   font-family: var(--font-sans);
   background-color: var(--bg-primary);
-  background-image:
-    radial-gradient(at 12% 8%, rgba(99, 102, 241, 0.08) 0px, transparent 45%),
-    radial-gradient(at 88% 15%, rgba(234, 88, 12, 0.07) 0px, transparent 45%),
-    radial-gradient(at 50% 90%, rgba(16, 185, 129, 0.06) 0px, transparent 50%);
-  background-attachment: fixed;
   color: var(--text-primary);
   line-height: 1.68;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   -webkit-font-smoothing: antialiased;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 /* ==========================================================================
@@ -338,16 +339,17 @@ body {
 }
 
 .btn-primary {
-  background: var(--gradient-brand);
+  background: var(--accent-primary);
   color: #ffffff !important;
-  border: none;
-  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.28);
+  border: 1px solid transparent;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.2);
 }
 
 .btn-primary:hover {
-  opacity: 0.95;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(79, 70, 229, 0.38);
+  background: var(--accent-primary-hover);
+  opacity: 1;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 
 /* Layout Shell */
@@ -415,10 +417,10 @@ body {
 }
 
 .week-nav-btn.active {
-  background: var(--gradient-hero);
+  background: var(--accent-primary-soft);
   border-color: var(--accent-primary);
-  color: var(--text-primary);
-  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.12);
+  color: var(--accent-primary-text);
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.1);
 }
 
 .week-nav-meta {
@@ -431,9 +433,8 @@ body {
   font-size: 0.69rem;
   font-weight: 800;
   text-transform: uppercase;
-  background: var(--gradient-brand);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--accent-primary);
+  letter-spacing: 0.05em;
 }
 
 .week-title {
@@ -472,43 +473,18 @@ body {
   max-width: 1060px;
 }
 
-/* Hero Banner with Animated Floating Orbs */
+/* Hero Banner - Clean Academic Card */
 .hero-card {
-  background: var(--gradient-hero);
-  border: 1px solid color-mix(in srgb, var(--accent-primary) 24%, var(--border-color));
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-top: 3px solid var(--accent-primary);
   border-radius: var(--radius-lg);
   padding: 2rem 2.2rem;
   margin-bottom: 1.85rem;
   box-shadow: var(--shadow-card);
   position: relative;
   overflow: hidden;
-  animation: slideUpSpring 0.45s var(--spring-ease) both;
-}
-
-.hero-card::before {
-  content: "";
-  position: absolute;
-  top: -60px;
-  right: -60px;
-  width: 200px;
-  height: 200px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(234, 88, 12, 0.16) 0%, transparent 70%);
-  animation: floatOrb 6s ease-in-out infinite;
-  pointer-events: none;
-}
-
-.hero-card::after {
-  content: "";
-  position: absolute;
-  bottom: -70px;
-  left: 30%;
-  width: 220px;
-  height: 220px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(79, 70, 229, 0.14) 0%, transparent 70%);
-  animation: floatOrb 8s ease-in-out infinite reverse;
-  pointer-events: none;
+  animation: slideUpSpring 0.35s var(--spring-ease) both;
 }
 
 .hero-card h1 {
@@ -570,10 +546,10 @@ body {
 }
 
 .tab-btn.active {
-  background: var(--gradient-brand);
-  border-color: transparent;
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
   color: #ffffff;
-  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.28);
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
 }
 
 /* Cards & Staggered Entrance Animations */
@@ -610,13 +586,16 @@ body {
 }
 
 .mental-shift-banner {
-  background: var(--gradient-shift);
-  border-left: 4px solid var(--accent-purple);
+  background: var(--bg-surface-elevated);
+  border-left: 4px solid var(--accent-primary);
   padding: 0.95rem 1.2rem;
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   margin: 0.9rem 0 1.2rem;
   font-size: 0.93rem;
   color: var(--text-secondary);
+  border-top: 1px solid var(--border-color);
+  border-right: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .mental-shift-banner strong {
@@ -897,8 +876,8 @@ pre.code-block {
 }
 
 .flashcard-container {
-  background: var(--gradient-hero);
-  border: 2px solid color-mix(in srgb, var(--accent-primary) 35%, var(--border-color));
+  background: var(--bg-surface);
+  border: 1.5px solid var(--border-color);
   border-radius: var(--radius-md);
   padding: 1.85rem;
   min-height: 195px;
@@ -913,17 +892,19 @@ pre.code-block {
 
 .flashcard-container:hover {
   transform: translateY(-4px) rotateX(2deg);
+  border-color: var(--accent-primary);
   box-shadow: var(--shadow-hover);
 }
 
 .flashcard-container.flipped {
-  background: linear-gradient(135deg, var(--accent-green-soft), var(--accent-cyan-soft));
-  border-color: var(--accent-green);
+  background: var(--bg-surface-elevated);
+  border-color: var(--accent-primary);
   animation: popScale 0.35s var(--spring-ease);
 }
 
 [data-theme="dark"] .flashcard-container.flipped {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(8, 145, 178, 0.18));
+  background: var(--bg-surface-elevated);
+  border-color: var(--accent-primary);
 }
 
 .flashcard-badge {
@@ -949,8 +930,8 @@ pre.code-block {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 1rem;
-  background: var(--gradient-hero);
-  border: 1px solid color-mix(in srgb, var(--accent-primary) 30%, var(--border-color));
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   padding: 1rem 1.25rem;
   margin-bottom: 1.5rem;
@@ -959,9 +940,7 @@ pre.code-block {
 .quiz-score-pill {
   font-weight: 800;
   font-size: 1rem;
-  background: var(--gradient-brand);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--accent-primary);
 }
 
 /* Interactive Widget Box */
@@ -1044,10 +1023,10 @@ pre.code-block {
 }
 
 .day-btn.active {
-  background: var(--gradient-brand);
-  border-color: transparent;
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
 }
 
 .daily-step-card {
@@ -1106,7 +1085,7 @@ pre.code-block {
   letter-spacing: 0.06em;
   padding: 0.25rem 0.75rem;
   border-radius: 999px;
-  background: var(--gradient-brand);
+  background: var(--accent-primary);
   color: #ffffff;
   margin-bottom: 0.75rem;
 }
@@ -1295,9 +1274,7 @@ pre.code-block {
 .student-level-xp {
   font-size: 0.74rem;
   font-weight: 800;
-  background: var(--gradient-brand);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--accent-primary);
 }
 
 .student-subtext {
@@ -1719,9 +1696,7 @@ pre.code-block {
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  background: var(--gradient-brand);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--accent-primary);
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;

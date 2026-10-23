@@ -1621,7 +1621,8 @@ window.setTheme = function(themeName) {
 
 // App Initialization
 document.addEventListener("DOMContentLoaded", () => {
-  const savedTheme = localStorage.getItem("ios_theme") || "aurora";
+  let savedTheme = localStorage.getItem("ios_theme") || "academic";
+  if (savedTheme === "aurora") savedTheme = "academic";
   document.documentElement.setAttribute("data-theme", savedTheme);
   const themeSel = document.getElementById("theme-selector");
   if (themeSel) themeSel.value = savedTheme;
