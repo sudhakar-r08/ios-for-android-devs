@@ -1,6 +1,44 @@
 // ============================================================================
-// ANDROID TO iOS ACADEMY — INTERACTIVE APPLICATION ENGINE
+// ANDROID TO iOS ACADEMY — INTERACTIVE EDUCATIONAL ENGINE
 // ============================================================================
+
+const COURSE_MODULES = [
+  {
+    id: 1,
+    title: "Module 1: The Swift Core & Protocol Paradigm",
+    subtitle: "Weeks 1 & 2 · Swift Basics, Syntax Quirks, Protocols & Error Handling",
+    badge: "Core Foundations",
+    weeks: [1, 2]
+  },
+  {
+    id: 2,
+    title: "Module 2: Declarative UI & Reactive State",
+    subtitle: "Weeks 3 & 4 · Jetpack Compose to SwiftUI & Observation (@Observable)",
+    badge: "UI & State",
+    weeks: [3, 4]
+  },
+  {
+    id: 3,
+    title: "Module 3: Concurrency, Actors & Navigation",
+    subtitle: "Weeks 5 & 6 · Swift Concurrency, Sendable & Value-Driven NavigationStack",
+    badge: "Concurrency & Flow",
+    weeks: [5, 6]
+  },
+  {
+    id: 4,
+    title: "Module 4: Enterprise Data, Networking & Security",
+    subtitle: "Weeks 7 & 8 · URLSession & Codable (No Retrofit!), SwiftData & Keychain",
+    badge: "Data & Security",
+    weeks: [7, 8]
+  },
+  {
+    id: 5,
+    title: "Module 5: Systems Internals, Testing & Shipping",
+    subtitle: "Weeks 9 & 10 · ARC Memory Internals, Swift Testing & TestFlight Release",
+    badge: "Production Ready",
+    weeks: [9, 10]
+  }
+];
 
 const ROSETTA_ITEMS = [
   {
@@ -142,7 +180,12 @@ let currentWeekNum = 1;
 let currentDay = 1; // 1..5 for daily steps; 0 for "All Days"
 let currentTab = "roadmap"; // "roadmap" | "learn" | "practice" | "linkedin" | "rosetta"
 let completedWeeks = JSON.parse(localStorage.getItem("ios_completed_weeks") || "[]");
+let completedDays = JSON.parse(localStorage.getItem("ios_completed_days_v2") || "{}");
+let masteredFlashcards = JSON.parse(localStorage.getItem("ios_mastered_cards_v2") || "{}");
 let quizAnswers = JSON.parse(localStorage.getItem("ios_quiz_answers_v2") || "{}");
+let checkpointAnswers = JSON.parse(localStorage.getItem("ios_checkpoint_answers_v2") || "{}");
+let codeViewMode = localStorage.getItem("ios_code_view_mode") || "split"; // "split" | "tabbed"
+let activeCodeTabs = {}; // stepKey -> "kotlin" | "swift"
 
 // Interactive Simulator States
 let arcUseWeak = false;
@@ -156,15 +199,105 @@ let navStackPath = ["Home"];
 let dispatchChoice = "some";
 let syntaxSelectedDemo = "labels"; // "labels" | "strings" | "guard"
 
+// Daily Checkpoint Questions (Instant Feedback)
+const DAILY_CHECKPOINTS = {
+  "1_1": {
+    question: "Quick Check: Which keyword defines an immutable constant in Swift (equivalent to Kotlin's `val`)?",
+    options: ["`let`", "`val`"],
+    correctIndex: 0,
+    explanation: "Swift uses `let` for immutable constants. If you use `var` and never mutate it, Xcode suggests switching to `let`."
+  },
+  "1_2": {
+    question: "Quick Check: What is the purpose of Swift's external argument labels?",
+    options: ["Call sites read like readable, natural English sentences", "To make compilation faster"],
+    correctIndex: 0,
+    explanation: "External argument labels like `transfer(amount: 50, from: checking, to: savings)` make call sites self-documenting prose."
+  },
+  "1_3": {
+    question: "Quick Check: How does `guard let` differ from standard `if let`?",
+    options: ["The compiler forces `guard let` to exit the scope early, keeping the unwrapped variable in scope for the rest of the function", "guard let runs on a background thread"],
+    correctIndex: 0,
+    explanation: "`guard let` enforces early exit (the Golden Path) and avoids pyramid-of-doom indentation."
+  },
+  "1_4": {
+    question: "Quick Check: What happens when you declare a Swift `struct` with `let`?",
+    options: ["The entire struct and all its properties are deeply frozen—even `var` properties cannot be modified", "Only the reference pointer is frozen; properties can still mutate"],
+    correctIndex: 0,
+    explanation: "Unlike Kotlin reference classes, `let` on a value type freezes the entire memory footprint deeply."
+  },
+  "1_5": {
+    question: "Quick Check: In Swift, what must you include in a `switch` statement if not all cases are explicitly handled?",
+    options: ["An explicit `default:` fallback case", "A `break` statement at the top"],
+    correctIndex: 0,
+    explanation: "Swift `switch` statements must be exhaustive. If not all enum cases or values are handled, a `default:` case is required."
+  }
+};
+
+function getCheckpointForDay(weekNum, dayNum, step) {
+  const key = `${weekNum}_${dayNum}`;
+  if (DAILY_CHECKPOINTS[key]) return DAILY_CHECKPOINTS[key];
+  return {
+    question: `Quick Check: What is the primary mental shift for Day ${dayNum}?`,
+    options: [step.shift, "No shift needed; works identical to Java"],
+    correctIndex: 0,
+    explanation: step.shift
+  };
+}
+
 function saveCompletedWeeks() {
   localStorage.setItem("ios_completed_weeks", JSON.stringify(completedWeeks));
   updateProgressUI();
   renderSidebar();
 }
 
+function saveCompletedDays() {
+  localStorage.setItem("ios_completed_days_v2", JSON.stringify(completedDays));
+  updateProgressUI();
+  renderSidebar();
+}
+
 function saveQuizAnswers() {
   localStorage.setItem("ios_quiz_answers_v2", JSON.stringify(quizAnswers));
+  updateProgressUI();
 }
+
+function saveMasteredFlashcards() {
+  localStorage.setItem("ios_mastered_cards_v2", JSON.stringify(masteredFlashcards));
+  updateProgressUI();
+}
+
+function isDayCompleted(weekNum, dayNum) {
+  return completedDays[weekNum] && completedDays[weekNum].includes(dayNum);
+}
+
+window.toggleDayCompleted = function(weekNum, dayNum) {
+  if (!completedDays[weekNum]) completedDays[weekNum] = [];
+  const idx = completedDays[weekNum].indexOf(dayNum);
+  if (idx === -1) {
+    completedDays[weekNum].push(dayNum);
+    launchConfetti();
+  } else {
+    completedDays[weekNum].splice(idx, 1);
+  }
+  saveCompletedDays();
+  renderMainContent();
+};
+
+function isCardMastered(weekNum, cardIdx) {
+  return masteredFlashcards[weekNum] && masteredFlashcards[weekNum].includes(cardIdx);
+}
+
+window.toggleCardMastered = function(weekNum, cardIdx) {
+  if (!masteredFlashcards[weekNum]) masteredFlashcards[weekNum] = [];
+  const idx = masteredFlashcards[weekNum].indexOf(cardIdx);
+  if (idx === -1) {
+    masteredFlashcards[weekNum].push(cardIdx);
+  } else {
+    masteredFlashcards[weekNum].splice(idx, 1);
+  }
+  saveMasteredFlashcards();
+  renderMainContent();
+};
 
 function toggleWeekComplete(weekNum) {
   if (completedWeeks.includes(weekNum)) {
@@ -177,13 +310,38 @@ function toggleWeekComplete(weekNum) {
   renderMainContent();
 }
 
+function getCompletedMicroStepsCount() {
+  let count = 0;
+  Object.values(completedDays).forEach(days => {
+    if (Array.isArray(days)) count += days.length;
+  });
+  return count;
+}
+
 function calculateTotalXP() {
   let xp = completedWeeks.length * 100;
   WEEKS_DATA.forEach(w => {
     const score = getWeekQuizScore(w.week);
     xp += score.correct * 15;
+    if (completedDays[w.week]) {
+      xp += completedDays[w.week].length * 20;
+    }
+    if (masteredFlashcards[w.week]) {
+      xp += masteredFlashcards[w.week].length * 10;
+    }
+  });
+  Object.keys(checkpointAnswers).forEach(() => {
+    xp += 10;
   });
   return xp;
+}
+
+function getStudentRank(xp) {
+  if (xp >= 1000) return { title: "🏆 Dual-Platform Master", level: 5 };
+  if (xp >= 600)  return { title: "🚀 Concurrency Pro", level: 4 };
+  if (xp >= 350)  return { title: "🛡️ SwiftUI Architect", level: 3 };
+  if (xp >= 150)  return { title: "⚡ Swift Apprentice", level: 2 };
+  return { title: "🌱 Android Scout", level: 1 };
 }
 
 function launchConfetti() {
@@ -204,12 +362,23 @@ function launchConfetti() {
 function updateProgressUI() {
   const totalWeeks = WEEKS_DATA.length || 10;
   const pct = Math.round((completedWeeks.length / totalWeeks) * 100);
+  const totalXP = calculateTotalXP();
+  const rank = getStudentRank(totalXP);
+  const stepsDone = getCompletedMicroStepsCount();
+
   const textEl = document.getElementById("progress-text");
   const fillEl = document.getElementById("progress-fill");
   const xpEl = document.getElementById("xp-count");
+  const rankBadgeEl = document.getElementById("student-rank-badge");
+  const studentXpEl = document.getElementById("student-xp-display");
+  const subtextEl = document.getElementById("student-completed-subtext");
+
   if (textEl) textEl.textContent = `${completedWeeks.length}/${totalWeeks} Weeks (${pct}%)`;
   if (fillEl) fillEl.style.width = `${Math.max(pct, 6)}%`;
-  if (xpEl) xpEl.textContent = calculateTotalXP();
+  if (xpEl) xpEl.textContent = totalXP;
+  if (rankBadgeEl) rankBadgeEl.textContent = rank.title;
+  if (studentXpEl) studentXpEl.textContent = `${totalXP} XP`;
+  if (subtextEl) subtextEl.textContent = `${stepsDone} of 50 micro-lessons completed`;
 }
 
 function escapeHtml(str) {
@@ -252,38 +421,190 @@ function getWeekQuizScore(weekNum) {
   return { correct, answered, total: weekObj.quiz.length };
 }
 
+// Mobile Sidebar Toggle
+window.toggleSidebar = function() {
+  const sidebar = document.getElementById("sidebar");
+  const backdrop = document.getElementById("sidebar-backdrop");
+  if (!sidebar) return;
+  sidebar.classList.toggle("mobile-open");
+  if (backdrop) backdrop.classList.toggle("active");
+};
+
+// Course Search Engine
+window.handleCourseSearch = function(query) {
+  const container = document.getElementById("search-results-list");
+  const clearBtn = document.getElementById("clear-search-btn");
+  if (!container) return;
+  if (!query || query.trim().length === 0) {
+    container.style.display = "none";
+    if (clearBtn) clearBtn.style.display = "none";
+    return;
+  }
+  if (clearBtn) clearBtn.style.display = "inline-block";
+  const q = query.toLowerCase().trim();
+  const results = [];
+
+  WEEKS_DATA.forEach(w => {
+    if (w.title.toLowerCase().includes(q) || (w.androidAnchor && w.androidAnchor.toLowerCase().includes(q))) {
+      results.push({ week: w.week, day: 1, title: `Week ${w.week}: ${w.title}`, sub: w.androidAnchor });
+    }
+    if (w.dailySteps) {
+      w.dailySteps.forEach(s => {
+        if (s.title.toLowerCase().includes(q) || s.goal.toLowerCase().includes(q) || (s.shift && s.shift.toLowerCase().includes(q))) {
+          results.push({ week: w.week, day: s.day, title: `Week ${w.week} · Day ${s.day}: ${s.title}`, sub: s.goal });
+        }
+      });
+    }
+  });
+
+  if (results.length === 0) {
+    container.innerHTML = `<div style="font-size:0.8rem;color:var(--text-muted);padding:0.5rem;">No matching lessons found for "${escapeHtml(query)}"</div>`;
+  } else {
+    container.innerHTML = results.slice(0, 8).map(r => `
+      <div class="search-result-item" onclick="jumpToSearchResult(${r.week}, ${r.day})">
+        <span class="search-result-tag">Week ${r.week} · Day ${r.day}</span>
+        <span class="search-result-title">${escapeHtml(r.title)}</span>
+        <span style="font-size:0.72rem;color:var(--text-muted);">${escapeHtml(r.sub || "")}</span>
+      </div>
+    `).join("");
+  }
+  container.style.display = "flex";
+};
+
+window.clearCourseSearch = function() {
+  const input = document.getElementById("course-search-input");
+  if (input) input.value = "";
+  handleCourseSearch("");
+};
+
+window.jumpToSearchResult = function(weekNum, dayNum) {
+  currentWeekNum = weekNum;
+  currentDay = dayNum;
+  currentTab = "learn";
+  clearCourseSearch();
+  const sidebar = document.getElementById("sidebar");
+  if (sidebar && sidebar.classList.contains("mobile-open")) {
+    toggleSidebar();
+  }
+  renderSidebar();
+  renderMainContent();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
+
+// Render Sidebar Curriculum Tree Grouped by Modules
 function renderSidebar() {
-  const listEl = document.getElementById("week-nav-list");
-  if (!listEl) return;
-  listEl.innerHTML = `
-    <li>
+  const treeEl = document.getElementById("curriculum-tree") || document.getElementById("week-nav-list");
+  if (!treeEl) return;
+
+  let html = `
+    <div style="margin-bottom:0.75rem;">
       <button class="week-nav-btn ${currentTab === "roadmap" ? "active" : ""}" onclick="selectTab('roadmap')">
         <div class="week-nav-meta">
           <span class="week-num">ORIENTATION</span>
           <span class="week-title">🧭 10-Week Roadmap & Guide</span>
         </div>
       </button>
-    </li>
-  ` + WEEKS_DATA.map(w => {
-    const isActive = (currentTab === "learn" || currentTab === "practice" || currentTab === "linkedin") && w.week === currentWeekNum;
-    const isDone = completedWeeks.includes(w.week);
-    const score = getWeekQuizScore(w.week);
-    return `
-      <li>
-        <button class="week-nav-btn ${isActive ? "active" : ""} ${isDone ? "completed" : ""}" onclick="selectWeek(${w.week})">
-          <div class="week-nav-meta">
-            <span class="week-num">Week ${w.week} · ${w.dates}</span>
-            <span class="week-title">${w.title}</span>
-            <span style="font-size:0.72rem;color:var(--text-muted);margin-top:0.1rem;">
-              Quiz: ${score.correct}/${score.total}
-            </span>
-          </div>
-          <span class="week-check" title="${isDone ? "Completed" : "In progress"}">${isDone ? "✓" : ""}</span>
-        </button>
-      </li>
+    </div>
+  `;
+
+  COURSE_MODULES.forEach(mod => {
+    html += `
+      <div class="module-group">
+        <div class="module-badge-header">
+          <span>${mod.title.split(":")[0]}</span>
+          <span style="color:var(--accent-primary);font-weight:700;">${mod.badge}</span>
+        </div>
+        <ul class="week-nav-list">
     `;
-  }).join("");
+
+    mod.weeks.forEach(weekNum => {
+      const w = WEEKS_DATA.find(item => item.week === weekNum);
+      if (!w) return;
+      const isSelectedWeek = w.week === currentWeekNum;
+      const isWeekTab = (currentTab === "learn" || currentTab === "practice" || currentTab === "linkedin");
+      const isExpanded = isSelectedWeek && isWeekTab;
+      const isDone = completedWeeks.includes(w.week);
+      const score = getWeekQuizScore(w.week);
+
+      html += `
+        <li class="sidebar-week-item">
+          <button class="week-nav-btn ${isExpanded ? "active" : ""} ${isDone ? "completed" : ""}" onclick="selectWeek(${w.week})">
+            <div class="week-nav-meta">
+              <span class="week-num">Week ${w.week} · ${w.dates}</span>
+              <span class="week-title">${w.title}</span>
+              <span style="font-size:0.72rem;color:var(--text-muted);margin-top:0.1rem;">
+                Quiz: ${score.correct}/${score.total}
+              </span>
+            </div>
+            <span class="week-check" title="${isDone ? "Completed" : "In progress"}">${isDone ? "✓" : ""}</span>
+          </button>
+      `;
+
+      if (isExpanded && w.dailySteps && w.dailySteps.length > 0) {
+        html += `
+          <ul class="sidebar-days-list">
+            ${w.dailySteps.map(step => {
+              const isStepActive = (currentTab === "learn" && currentDay === step.day);
+              const isStepDone = isDayCompleted(w.week, step.day);
+              return `
+                <li>
+                  <button class="sidebar-day-link ${isStepActive ? "active" : ""}" onclick="selectDayFromSidebar(${step.day})">
+                    <span style="display:flex;align-items:center;gap:0.4rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                      <span class="day-status-dot ${isStepDone ? "completed" : ""}">
+                        ${isStepDone ? "✓" : step.day}
+                      </span>
+                      <span>Day ${step.day}: ${escapeHtml(step.title.split(":")[0].replace(/Day \d+ - /i, ""))}</span>
+                    </span>
+                    <span style="font-size:0.68rem;color:var(--text-muted);flex-shrink:0;">${step.time || "15m"}</span>
+                  </button>
+                </li>
+              `;
+            }).join("")}
+            <li>
+              <button class="sidebar-day-link ${currentTab === "practice" ? "active" : ""}" onclick="selectTab('practice')">
+                <span style="display:flex;align-items:center;gap:0.4rem;">
+                  <span>🏆</span>
+                  <span>10-Question Quiz & Lab</span>
+                </span>
+                <span style="font-size:0.68rem;color:var(--text-muted);">${score.correct}/${score.total}</span>
+              </button>
+            </li>
+            <li>
+              <button class="sidebar-day-link ${currentTab === "linkedin" ? "active" : ""}" onclick="selectTab('linkedin')">
+                <span style="display:flex;align-items:center;gap:0.4rem;">
+                  <span>📰</span>
+                  <span>LinkedIn Article Kit</span>
+                </span>
+              </button>
+            </li>
+          </ul>
+        `;
+      }
+
+      html += `</li>`;
+    });
+
+    html += `
+        </ul>
+      </div>
+    `;
+  });
+
+  treeEl.innerHTML = html;
+  updateProgressUI();
 }
+
+window.selectDayFromSidebar = function(dayNum) {
+  currentDay = dayNum;
+  currentTab = "learn";
+  const sidebar = document.getElementById("sidebar");
+  if (sidebar && sidebar.classList.contains("mobile-open")) {
+    toggleSidebar();
+  }
+  renderSidebar();
+  renderMainContent();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
 
 window.selectWeek = function(weekNum) {
   currentWeekNum = weekNum;
@@ -291,6 +612,10 @@ window.selectWeek = function(weekNum) {
   flashcardIdx = 0;
   flashcardFlipped = false;
   currentTab = "learn";
+  const sidebar = document.getElementById("sidebar");
+  if (sidebar && sidebar.classList.contains("mobile-open")) {
+    toggleSidebar();
+  }
   renderSidebar();
   renderMainContent();
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -298,6 +623,10 @@ window.selectWeek = function(weekNum) {
 
 window.selectTab = function(tab) {
   currentTab = tab;
+  const sidebar = document.getElementById("sidebar");
+  if (sidebar && sidebar.classList.contains("mobile-open")) {
+    toggleSidebar();
+  }
   renderSidebar();
   renderMainContent();
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -305,6 +634,7 @@ window.selectTab = function(tab) {
 
 window.selectDay = function(dayNum) {
   currentDay = dayNum;
+  renderSidebar();
   renderMainContent();
 };
 
@@ -328,11 +658,42 @@ window.nextFlashcard = function(delta, total) {
   renderMainContent();
 };
 
+// Code View Switcher
+window.toggleCodeViewMode = function() {
+  codeViewMode = codeViewMode === "split" ? "tabbed" : "split";
+  try { localStorage.setItem("ios_code_view_mode", codeViewMode); } catch (e) {}
+  renderMainContent();
+};
+
+window.selectCodeTab = function(stepKey, lang) {
+  activeCodeTabs[stepKey] = lang;
+  renderMainContent();
+};
+
+// Inline Checkpoint Answering
+window.answerCheckpoint = function(weekNum, dayNum, optionIdx) {
+  const key = `${weekNum}_${dayNum}`;
+  checkpointAnswers[key] = optionIdx;
+  try {
+    localStorage.setItem("ios_checkpoint_answers_v2", JSON.stringify(checkpointAnswers));
+  } catch (e) {}
+
+  const step = WEEKS_DATA.find(w => w.week === weekNum)?.dailySteps?.find(s => s.day === dayNum);
+  const cp = getCheckpointForDay(weekNum, dayNum, step);
+  if (optionIdx === cp.correctIndex) {
+    launchConfetti();
+  }
+  updateProgressUI();
+  renderMainContent();
+};
+
 function renderFlashcardsSection(weekObj) {
   const cards = weekObj.flashcards || [];
   if (cards.length === 0) return "";
   const idx = Math.min(flashcardIdx, cards.length - 1);
   const card = cards[idx];
+  const isMastered = isCardMastered(weekObj.week, idx);
+  const masteredCount = (masteredFlashcards[weekObj.week] || []).length;
 
   return `
     <div class="section-card">
@@ -343,7 +704,7 @@ function renderFlashcardsSection(weekObj) {
         </div>
         <div style="display:flex;align-items:center;gap:0.5rem;">
           <button class="btn" onclick="nextFlashcard(-1, ${cards.length})">← Prev</button>
-          <span style="font-size:0.82rem;font-weight:600;color:var(--text-secondary);">${idx + 1} / ${cards.length}</span>
+          <span style="font-size:0.82rem;font-weight:700;color:var(--text-secondary);">${idx + 1} / ${cards.length}</span>
           <button class="btn" onclick="nextFlashcard(1, ${cards.length})">Next →</button>
         </div>
       </div>
@@ -357,11 +718,20 @@ function renderFlashcardsSection(weekObj) {
           ✨ Tap anywhere on this card to flip
         </div>
       </div>
+
+      <div class="flashcard-mastery-bar">
+        <span style="font-size:0.8rem;color:var(--text-muted);font-weight:600;">
+          Mastery: ${masteredCount} of ${cards.length} cards mastered
+        </span>
+        <button class="flashcard-rating-btn ${isMastered ? "mastered" : ""}" onclick="toggleCardMastered(${weekObj.week}, ${idx})">
+          ${isMastered ? "🔥 Mastered (+10 XP) ✓" : "Mark as Mastered (+10 XP)"}
+        </button>
+      </div>
     </div>
   `;
 }
 
-// Simulators
+// Interactive Simulators
 window.toggleArcWeak = function(useWeak) { arcUseWeak = useWeak; renderMainContent(); };
 window.toggleArcScope = function(exited) { arcScopeExited = exited; renderMainContent(); };
 window.toggleCowMutation = function(mutated) { cowMutated = mutated; renderMainContent(); };
@@ -448,8 +818,8 @@ print("Hello \\(name)! Next year you will have \\(experienceYears + 1) years of 
           ` : `
             <div style="color:var(--accent-danger);font-weight:700;margin-bottom:0.4rem;">⚠️ Existential Container (any View) — Dynamic Dispatch</div>
             <div>• Concrete Type Fixed at Compile Time: No (Can swap between Text, Button, VStack at runtime)</div>
-            <div>• Memory Layout: 5-word Existential Container (3 words value buffer + Metadata pointer + Protocol Witness Table pointer; heap-allocates if > 24 bytes)</div>
-            <div>• Method Call Mechanism: Indirect lookup via Protocol Witness Table (vtable)</div>
+            <div>• Heap Boxing Overhead: 24+ bytes (Existential Box with Witness Table pointer)</div>
+            <div>• Method Call Mechanism: Dynamic Witness Table Lookup</div>
           `}
         </div>
       </div>
@@ -461,32 +831,22 @@ print("Hello \\(name)! Next year you will have \\(experienceYears + 1) years of 
       <div class="interactive-widget">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.75rem;">
           <div>
-            <h2>🎨 Interactive SwiftUI Modifier Order Sandbox</h2>
-            <p style="font-size:0.88rem;color:var(--text-secondary);">Click to swap the order of <code>.padding(20)</code> and <code>.background(.blue)</code> and see how wrapper views change the rendered box!</p>
+            <h2>📐 SwiftUI Modifier Order Simulator (Wrapping vs Mutating)</h2>
+            <p style="font-size:0.88rem;color:var(--text-secondary);">In Compose, modifiers mutate sequentially. In SwiftUI, modifiers wrap views from inside out.</p>
           </div>
           <div style="display:flex;gap:0.5rem;">
             <button class="btn ${modifierPaddingFirst ? "btn-primary" : ""}" onclick="toggleModifierOrder(true)">
-              Order A: <code>.padding(20).background(.blue)</code>
+              <code>.padding().background()</code>
             </button>
             <button class="btn ${!modifierPaddingFirst ? "btn-primary" : ""}" onclick="toggleModifierOrder(false)">
-              Order B: <code>.background(.blue).padding(20)</code>
+              <code>.background().padding()</code>
             </button>
           </div>
         </div>
-
-        <div class="widget-stage" style="display:flex;align-items:center;justify-content:space-around;flex-wrap:wrap;gap:1.5rem;">
-          <pre class="code-block" style="background:var(--bg-surface);border:1px solid var(--border-color);border-radius:8px;"><code>Text("Upgrade to Pro")
-${modifierPaddingFirst
-  ? "    .padding(20)       // 1. Expands bounds by 20pt\n    .background(.blue) // 2. Paints full padded box blue"
-  : "    .background(.blue) // 1. Paints tight text bounds blue\n    .padding(20)       // 2. Adds 20pt transparent outer margin"}
-    .border(.red)      // Outer layout frame</code></pre>
-
-          <div style="text-align:center;">
-            <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:0.4rem;">LIVE RENDERED PREVIEW (Red = Outer Frame)</div>
-            <div style="border:2px dashed #e11d48;display:inline-block;padding:${modifierPaddingFirst ? "0px" : "20px"};">
-              <div style="background:#2563eb;color:#fff;font-weight:700;border-radius:6px;padding:${modifierPaddingFirst ? "20px 28px" : "2px 6px"};">
-                Upgrade to Pro
-              </div>
+        <div class="widget-stage" style="display:flex;align-items:center;justify-content:center;padding:2rem;">
+          <div style="border:2px dashed #e11d48;display:inline-block;padding:${modifierPaddingFirst ? "0px" : "20px"};">
+            <div style="background:#2563eb;color:#fff;font-weight:700;border-radius:6px;padding:${modifierPaddingFirst ? "20px 28px" : "2px 6px"};">
+              ${modifierPaddingFirst ? "Padding Inside ➔ Blue Covers All" : "Tight Blue Background ➔ Red Dashes Show Outer Padding"}
             </div>
           </div>
         </div>
@@ -499,8 +859,8 @@ ${modifierPaddingFirst
       <div class="interactive-widget">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.75rem;">
           <div>
-            <h2>⚡ Interactive <code>@Observable</code> Fine-Grained Re-render Tracker</h2>
-            <p style="font-size:0.88rem;color:var(--text-secondary);">Mutate a property on <code>CheckoutViewModel</code> and watch which child SwiftUI View re-evaluates its <code>body</code>!</p>
+            <h2>🔬 <code>@Observable</code> Invalidation Simulator (iOS 17+)</h2>
+            <p style="font-size:0.88rem;color:var(--text-secondary);">Click a property to see why fine-grained observation only updates views that read that property!</p>
           </div>
           <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
             <button class="btn ${observableLastMutated === "user" ? "btn-primary" : ""}" onclick="triggerObservableMutation('user')">Mutate <code>vm.username</code></button>
@@ -508,21 +868,14 @@ ${modifierPaddingFirst
             <button class="btn ${observableLastMutated === "ignored" ? "btn-primary" : ""}" onclick="triggerObservableMutation('ignored')">Mutate <code>@ObservationIgnored cache</code></button>
           </div>
         </div>
-
-        <div class="widget-stage" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;">
-          <div style="padding:1rem;border-radius:8px;border:2px solid ${observableLastMutated === "user" ? "var(--accent-green)" : "var(--border-color)"};background:${observableLastMutated === "user" ? "var(--accent-green-soft)" : "var(--bg-surface)"};">
-            <strong>HeaderView</strong>
-            <div style="font-size:0.8rem;color:var(--text-secondary);">Reads: <code>vm.username</code></div>
-            <div style="margin-top:0.5rem;font-weight:700;font-size:0.82rem;">
-              ${observableLastMutated === "user" ? "🔄 body Re-evaluated!" : "⏸️ Skipped (0 work)"}
-            </div>
+        <div class="widget-stage" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:0.75rem;">
+          <div style="padding:1rem;border-radius:8px;border:2px solid ${observableLastMutated === "user" ? "var(--accent-green)" : "var(--border-color)"};background:var(--bg-surface);">
+            <strong>HeaderView</strong>: Reads <code>vm.username</code>
+            <div style="margin-top:0.4rem;font-size:0.85rem;">Status: ${observableLastMutated === "user" ? "⚡ Re-rendered!" : "Idle (Zero Render Overhead)"}</div>
           </div>
-          <div style="padding:1rem;border-radius:8px;border:2px solid ${observableLastMutated === "cart" ? "var(--accent-green)" : "var(--border-color)"};background:${observableLastMutated === "cart" ? "var(--accent-green-soft)" : "var(--bg-surface)"};">
-            <strong>CartBadgeView</strong>
-            <div style="font-size:0.8rem;color:var(--text-secondary);">Reads: <code>vm.cartTotal</code></div>
-            <div style="margin-top:0.5rem;font-weight:700;font-size:0.82rem;">
-              ${observableLastMutated === "cart" ? "🔄 body Re-evaluated!" : "⏸️ Skipped (0 work)"}
-            </div>
+          <div style="padding:1rem;border-radius:8px;border:2px solid ${observableLastMutated === "cart" ? "var(--accent-green)" : "var(--border-color)"};background:var(--bg-surface);">
+            <strong>CartFooterView</strong>: Reads <code>vm.cartTotal</code>
+            <div style="margin-top:0.4rem;font-size:0.85rem;">Status: ${observableLastMutated === "cart" ? "⚡ Re-rendered!" : "Idle (Zero Render Overhead)"}</div>
           </div>
         </div>
       </div>
@@ -534,29 +887,23 @@ ${modifierPaddingFirst
       <div class="interactive-widget">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.75rem;">
           <div>
-            <h2>🧭 Interactive <code>NavigationStack(path: $path)</code> Simulator</h2>
-            <p style="font-size:0.88rem;color:var(--text-secondary);">Manipulate the <code>path: [Route]</code> state array and watch the iOS navigation backstack respond.</p>
+            <h2>🧭 NavigationStack Value Routing Simulator</h2>
+            <p style="font-size:0.88rem;color:var(--text-secondary);">Your navigation stack is just an array: <code>[${navStackPath.join(", ")}]</code></p>
           </div>
-          <div style="display:flex;gap:0.45rem;flex-wrap:wrap;">
-            <button class="btn btn-primary" onclick="mutateNavStack('detail')"><code>path.append(.detail(42))</code></button>
-            <button class="btn btn-primary" onclick="mutateNavStack('settings')"><code>path.append(.settings)</code></button>
-            <button class="btn" onclick="mutateNavStack('deeplink')">🔗 Simulate Deep Link</button>
-            <button class="btn" onclick="mutateNavStack('pop')">⬅️ Pop Last</button>
-            <button class="btn" onclick="mutateNavStack('root')">🏠 <code>path.removeAll()</code> (Root)</button>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+            <button class="btn" onclick="mutateNavStack('detail')">+ Push Detail</button>
+            <button class="btn" onclick="mutateNavStack('settings')">+ Push Settings</button>
+            <button class="btn" onclick="mutateNavStack('deeplink')">🔗 Simulate Deep Link (4 deep)</button>
+            <button class="btn" onclick="mutateNavStack('pop')">← Pop 1</button>
+            <button class="btn btn-primary" onclick="mutateNavStack('root')">🏠 Pop to Root</button>
           </div>
         </div>
-
-        <div class="widget-stage">
-          <div style="font-family:var(--font-mono);font-size:0.84rem;margin-bottom:0.65rem;">
-            <strong>@State private var path: [Route] = </strong> [${navStackPath.slice(1).map(s => `.${s}`).join(", ")}]
-          </div>
-          <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
-            ${navStackPath.map((screen, idx) => `
-              <span class="pill ${idx === navStackPath.length - 1 ? "pill-swift" : "pill-kotlin"}" style="font-size:0.82rem;padding:0.35rem 0.8rem;">
-                ${idx + 1}. ${screen}
-              </span>
-              ${idx < navStackPath.length - 1 ? "<span>→</span>" : ""}
-            `).join("")}
+        <div class="widget-stage" style="font-family:var(--font-mono);font-size:0.85rem;margin-top:0.75rem;">
+          <div>Current Stack Depth: <strong>${navStackPath.length}</strong></div>
+          <div style="margin-top:0.5rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
+            ${navStackPath.map((item, idx) => `
+              <span class="pill pill-swift">${idx}: ${item}</span>
+            `).join(" ➔ ")}
           </div>
         </div>
       </div>
@@ -564,80 +911,39 @@ ${modifierPaddingFirst
   }
 
   if (weekObj.week === 9) {
-    const playlistRc = arcScopeExited ? (arcUseWeak ? 0 : 1) : (arcUseWeak ? 1 : 2);
-    const songRc = arcScopeExited ? (arcUseWeak ? 0 : 1) : 2;
-    const isLeaked = arcScopeExited && !arcUseWeak;
-    const isFreed = arcScopeExited && arcUseWeak;
-
+    const isLeaked = !arcUseWeak && arcScopeExited;
     return `
       <div class="interactive-widget">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.75rem;">
           <div>
-            <h2>🔬 Interactive Lab 9A: ARC Retain Cycle Simulator</h2>
-            <p style="font-size:0.88rem;color:var(--text-secondary);">Toggle between <code>strong</code> and <code>weak var playlist</code> and exit <code>playMusic()</code> to watch ARC reference counts live.</p>
+            <h2>🔬 Interactive ARC Retain Cycle Simulator (Moved to Week 9)</h2>
+            <p style="font-size:0.88rem;color:var(--text-secondary);">Toggle <code>[weak self]</code> and exit scope to see memory allocation in real time.</p>
           </div>
           <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
-            <button class="btn ${!arcUseWeak ? "btn-primary" : ""}" onclick="toggleArcWeak(false)">Strong Back-Ref (Leak)</button>
-            <button class="btn ${arcUseWeak ? "btn-primary" : ""}" onclick="toggleArcWeak(true)"><code>weak var playlist</code> (Safe)</button>
-            <button class="btn" onclick="toggleArcScope(${!arcScopeExited})">
-              ${arcScopeExited ? "🔄 Reset Inside playMusic()" : "⏭️ Exit playMusic() Scope"}
+            <button class="btn ${arcUseWeak ? "btn-primary" : ""}" onclick="toggleArcWeak(true)">Use <code>[weak self]</code></button>
+            <button class="btn ${!arcUseWeak ? "btn-primary" : ""}" onclick="toggleArcWeak(false)">Strong Reference (Leak!)</button>
+            <button class="btn" onclick="toggleArcScope(!arcScopeExited)">
+              ${arcScopeExited ? "↺ Re-Enter Scope" : "🚪 Exit Scope (Scope Ends)"}
             </button>
           </div>
         </div>
 
-        <div class="arc-nodes">
-          <div class="arc-node ${isLeaked ? "leaked" : ""} ${isFreed ? "freed" : ""}">
-            <div style="font-weight:700;">Playlist (Class)</div>
-            <div style="font-size:0.8rem;color:var(--text-secondary);">var song: Song? (strong)</div>
-            <span class="rc-badge">retainCount = ${playlistRc}</span>
-            <div style="margin-top:0.4rem;font-size:0.8rem;font-weight:600;color:${isLeaked ? "var(--accent-danger)" : isFreed ? "var(--accent-green)" : "var(--accent-primary-text)"};">
-              ${isLeaked ? "❌ MEMORY LEAK (rc=1)" : isFreed ? "✅ deinit called! Freed" : "Alive in scope"}
+        <div class="widget-stage" style="margin-top:0.85rem;display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+          <div style="padding:1rem;border-radius:8px;border:2px solid ${isLeaked ? "var(--accent-danger)" : "var(--accent-green)"};background:var(--bg-surface);">
+            <div style="font-weight:700;">Object State:</div>
+            <div>Retain Count: <strong>${arcScopeExited ? (arcUseWeak ? 0 : 1) : 2}</strong></div>
+            <div style="margin-top:0.35rem;font-weight:700;color:${isLeaked ? "var(--accent-danger)" : "var(--accent-green)"};">
+              ${arcScopeExited
+                ? (arcUseWeak ? "✅ DEINIT CALLED: Memory cleanly deallocated immediately!" : "❌ PERMANENT LEAK: Retain cycle kept memory alive at rc=1!")
+                : "Active in Scope (Retain count = 2)"}
             </div>
           </div>
-
-          <div style="text-align:center;font-family:var(--font-mono);font-size:0.82rem;">
-            <div>Playlist.song ───strong (rc+1)───▶ Song</div>
-            <div style="margin-top:0.45rem;color:${arcUseWeak ? "var(--accent-green)" : "var(--accent-danger)"};">
-              Playlist ◀──${arcUseWeak ? "weak (rc+0)" : "strong (rc+1)"}── Song.playlist
-            </div>
-          </div>
-
-          <div class="arc-node ${isLeaked ? "leaked" : ""} ${isFreed ? "freed" : ""}">
-            <div style="font-weight:700;">Song (Class)</div>
-            <div style="font-size:0.8rem;color:var(--text-secondary);">${arcUseWeak ? "weak " : ""}var playlist: Playlist?</div>
-            <span class="rc-badge">retainCount = ${songRc}</span>
-            <div style="margin-top:0.4rem;font-size:0.8rem;font-weight:600;color:${isLeaked ? "var(--accent-danger)" : isFreed ? "var(--accent-green)" : "var(--accent-primary-text)"};">
-              ${isLeaked ? "❌ MEMORY LEAK (rc=1)" : isFreed ? "✅ deinit called! Freed" : "Alive in scope"}
-            </div>
-          </div>
-        </div>
-
-        <hr style="border:none;border-top:1px solid var(--border-color);margin:1.5rem 0;" />
-
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.75rem;">
-          <div>
-            <h2>🔬 Interactive Lab 9B: Copy-on-Write (CoW) Buffer Visualizer</h2>
-            <p style="font-size:0.88rem;color:var(--text-secondary);">See what happens in memory when you assign <code>var listB = listA</code> vs. when you mutate <code>listB.append(4)</code>.</p>
-          </div>
-          <div style="display:flex;gap:0.5rem;">
-            <button class="btn ${!cowMutated ? "btn-primary" : ""}" onclick="toggleCowMutation(false)">Step 1: <code>var listB = listA</code> (Read-Only)</button>
-            <button class="btn ${cowMutated ? "btn-primary" : ""}" onclick="toggleCowMutation(true)">Step 2: <code>listB.append(4)</code> (Mutate)</button>
-          </div>
-        </div>
-
-        <div class="widget-stage">
-          ${!cowMutated ? `
-            <p style="font-family:var(--font-mono);font-size:0.85rem;">
-              <strong>listA (Stack Struct)</strong> ──┐<br/>
-              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├──▶ <strong>Shared Buffer @ 0x7ffee1 [1, 2, 3]</strong> (Buffer retainCount = 2 · Zero copy cost!)<br/>
-              <strong>listB (Stack Struct)</strong> ──┘
+          <div style="padding:1rem;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-surface);font-size:0.85rem;">
+            <strong>Memory Model Shift:</strong>
+            <p style="color:var(--text-secondary);margin-top:0.25rem;">
+              Unlike Android's tracing GC which collects unreachable circular islands, ARC requires retain count to reach 0. Always use <code>[weak self]</code> in escaping closures!
             </p>
-          ` : `
-            <p style="font-family:var(--font-mono);font-size:0.85rem;">
-              <strong>listA (Stack Struct)</strong> ──────▶ <strong>Original Buffer @ 0x7ffee1 [1, 2, 3]</strong> (Untouched! retainCount = 1)<br/><br/>
-              <strong>listB (Stack Struct)</strong> ──────▶ <strong style="color:var(--accent-green);">New Forked Buffer @ 0x9a44b0 [1, 2, 3, 4]</strong> (Copied on mutation!)
-            </p>
-          `}
+          </div>
         </div>
       </div>
     `;
@@ -646,196 +952,445 @@ ${modifierPaddingFirst
   return "";
 }
 
-// Quizzes & Code Challenges
-window.answerQuiz = function(weekNum, qIdx, optIdx) {
-  const weekObj = WEEKS_DATA.find(w => w.week === weekNum);
-  if (!quizAnswers[weekNum]) quizAnswers[weekNum] = {};
-  quizAnswers[weekNum][qIdx] = optIdx;
-  saveQuizAnswers();
+// Main Content Renderer
+function renderMainContent() {
+  const container = document.getElementById("main-content");
+  if (!container) return;
 
-  if (weekObj && weekObj.quiz[qIdx] && optIdx === weekObj.quiz[qIdx].correctIndex) {
-    launchConfetti();
+  const weekObj = WEEKS_DATA.find(w => w.week === currentWeekNum) || WEEKS_DATA[0];
+  const isCompleted = completedWeeks.includes(weekObj.week);
+  const quizScore = getWeekQuizScore(weekObj.week);
+
+  // Tab Navigation Bar
+  const tabsHtml = `
+    <div class="view-tabs">
+      <button class="tab-btn ${currentTab === "roadmap" ? "active" : ""}" onclick="selectTab('roadmap')">
+        🧭 10-Week Roadmap
+      </button>
+      <button class="tab-btn ${currentTab === "learn" ? "active" : ""}" onclick="selectTab('learn')">
+        📖 Daily Lessons (Week ${weekObj.week})
+      </button>
+      <button class="tab-btn ${currentTab === "practice" ? "active" : ""}" onclick="selectTab('practice')">
+        🏆 Quiz & Lab (${quizScore.correct}/${quizScore.total})
+      </button>
+      <button class="tab-btn ${currentTab === "linkedin" ? "active" : ""}" onclick="selectTab('linkedin')">
+        📰 LinkedIn Publication Kit
+      </button>
+      <button class="tab-btn ${currentTab === "rosetta" ? "active" : ""}" onclick="selectTab('rosetta')">
+        🗺️ Rosetta Stone
+      </button>
+    </div>
+  `;
+
+  if (currentTab === "roadmap") {
+    container.innerHTML = tabsHtml + renderRoadmapView();
+    return;
   }
 
-  const score = getWeekQuizScore(weekNum);
-  if (score.correct >= 4 && !completedWeeks.includes(weekNum)) {
-    completedWeeks.push(weekNum);
-    saveCompletedWeeks();
-  } else {
-    updateProgressUI();
-    renderSidebar();
+  if (currentTab === "rosetta") {
+    container.innerHTML = tabsHtml + renderRosettaView();
+    return;
   }
-  renderMainContent();
-};
 
-window.resetWeekQuiz = function(weekNum) {
-  delete quizAnswers[weekNum];
-  saveQuizAnswers();
-  renderSidebar();
-  renderMainContent();
-};
+  // Find module for current week
+  const mod = COURSE_MODULES.find(m => m.weeks.includes(weekObj.week)) || COURSE_MODULES[0];
 
-window.verifyCodeChallenge = function(weekNum) {
-  const weekObj = WEEKS_DATA.find(w => w.week === weekNum);
-  const input = document.getElementById("challenge-editor").value;
-  const feedbackEl = document.getElementById("challenge-feedback");
-  const missing = weekObj.codeChallenge.requiredTokens.filter(t => !input.includes(t));
-  feedbackEl.classList.add("visible");
-  if (missing.length === 0) {
-    feedbackEl.style.background = "var(--accent-green-soft)";
-    feedbackEl.style.border = "1px solid var(--accent-green)";
-    feedbackEl.innerHTML = `
-      <div><strong>🎉 All Swift Compiler Checks Passed!</strong> Great job applying <code>${weekObj.codeChallenge.requiredTokens.join("</code>, <code>")}</code>.</div>
-      ${weekObj.codeChallenge.simulatedOutput ? `<div class="console-output">${escapeHtml(weekObj.codeChallenge.simulatedOutput)}</div>` : ""}
-    `;
-    launchConfetti();
-    if (!completedWeeks.includes(weekNum)) {
-      toggleWeekComplete(weekNum);
+  // Breadcrumbs Bar
+  const currentStepObj = weekObj.dailySteps?.find(s => s.day === currentDay);
+  const breadcrumbHtml = `
+    <div class="lesson-breadcrumb-bar">
+      <div class="breadcrumbs">
+        <span class="crumb" onclick="selectTab('roadmap')">🎓 Curriculum</span>
+        <span class="crumb-separator">/</span>
+        <span class="crumb" onclick="selectTab('roadmap')">${mod.title.split(":")[0]}</span>
+        <span class="crumb-separator">/</span>
+        <span class="crumb" onclick="selectTab('learn')">Week ${weekObj.week}: ${weekObj.title}</span>
+        ${currentDay > 0 && currentStepObj ? `
+          <span class="crumb-separator">/</span>
+          <span class="crumb active">Day ${currentDay}: ${escapeHtml(currentStepObj.title.split(":")[0])}</span>
+        ` : ""}
+      </div>
+      <div class="lesson-meta-badges">
+        <span class="meta-badge">⏱️ ~15 mins read</span>
+        <span class="meta-badge xp-meta">⚡ +20 XP on completion</span>
+      </div>
+    </div>
+  `;
+
+  // Hero Card
+  const headerHtml = `
+    <div class="hero-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;">
+        <div>
+          <span class="pill pill-swift">${mod.badge} · Week ${weekObj.week} of 10 · ${weekObj.dates}</span>
+          <h1 style="margin-top:0.55rem;">${formatInlineCode(weekObj.title)}</h1>
+          <p>${formatInlineCode(weekObj.subtitle)}</p>
+        </div>
+        <button class="btn ${isCompleted ? "" : "btn-primary"}" onclick="toggleWeekComplete(${weekObj.week})">
+          ${isCompleted ? "✅ Week Completed (Click to Undo)" : "Mark Week " + weekObj.week + " Complete"}
+        </button>
+      </div>
+      <div class="hero-meta-row">
+        <span class="pill pill-kotlin">🤖 Android: ${formatInlineCode(weekObj.androidAnchor)}</span>
+        <span class="pill pill-swift">🍎 iOS: ${formatInlineCode(weekObj.iosAnchor)}</span>
+      </div>
+    </div>
+  `;
+
+  let bodyHtml = "";
+
+  if (currentTab === "learn") {
+    bodyHtml += renderInteractiveSimulator(weekObj);
+
+    // DAILY MICRO-STEPS SELECTOR RIBBON
+    if (weekObj.dailySteps && weekObj.dailySteps.length > 0) {
+      bodyHtml += `
+        <div class="day-selector-bar">
+          <span style="font-size:0.75rem;font-weight:800;color:var(--text-muted);text-transform:uppercase;margin-right:0.35rem;">Daily Steps:</span>
+          ${weekObj.dailySteps.map(step => {
+            const isStepDone = isDayCompleted(weekObj.week, step.day);
+            return `
+              <button class="day-btn ${currentDay === step.day ? "active" : ""}" onclick="selectDay(${step.day})">
+                ${isStepDone ? "✓ " : ""}Day ${step.day} (${step.time || "15m"})
+              </button>
+            `;
+          }).join("")}
+          <button class="day-btn ${currentDay === 0 ? "active" : ""}" onclick="selectDay(0)">
+            📚 View All Days
+          </button>
+        </div>
+      `;
+
+      const stepsToRender = currentDay === 0
+        ? weekObj.dailySteps
+        : weekObj.dailySteps.filter(s => s.day === currentDay);
+
+      bodyHtml += stepsToRender.map(step => {
+        const stepKey = `${weekObj.week}_${step.day}`;
+        const isStepDone = isDayCompleted(weekObj.week, step.day);
+        const checkpoint = getCheckpointForDay(weekObj.week, step.day, step);
+        const answeredOption = checkpointAnswers[stepKey];
+        const hasAnsweredCheckpoint = answeredOption !== undefined;
+        const activeTab = activeCodeTabs[stepKey] || "kotlin";
+
+        return `
+          <div class="daily-step-card">
+            <div class="daily-step-header">
+              <div>
+                <span class="pill pill-swift">Day ${step.day} of 5 · ⏱️ ${step.time || "15 mins"}</span>
+                <h2 style="margin-top:0.35rem;">${formatInlineCode(step.title)}</h2>
+              </div>
+              <button class="mark-day-complete-btn ${isStepDone ? "completed" : ""}" onclick="toggleDayCompleted(${weekObj.week}, ${step.day})">
+                ${isStepDone ? "✓ Day Completed (+20 XP)" : "Mark Day Complete (+20 XP)"}
+              </button>
+            </div>
+
+            <!-- Objective Callout -->
+            <div class="callout-card callout-action">
+              <div class="callout-header">🎯 Today's Learning Objective</div>
+              <div class="callout-body">${formatInlineCode(step.goal)}</div>
+            </div>
+
+            <!-- Android Mental Model Callout -->
+            <div class="callout-card callout-android">
+              <div class="callout-header">🤖 The Android (Kotlin) Mental Model</div>
+              <div class="callout-body">${formatInlineCode(step.shift)}</div>
+            </div>
+
+            ${step.details && step.details.length ? `
+              <ul class="concept-details-list">
+                ${step.details.map(d => `<li>${formatInlineCode(d)}</li>`).join("")}
+              </ul>
+            ` : ""}
+
+            <!-- macOS Code Window -->
+            <div class="mac-code-window">
+              <div class="mac-titlebar">
+                <div class="mac-dots">
+                  <div class="mac-dot red"></div>
+                  <div class="mac-dot yellow"></div>
+                  <div class="mac-dot green"></div>
+                </div>
+                <div class="mac-titlebar-label">
+                  <span>${codeViewMode === "split" ? "🤖 Android (Kotlin) ⟷ 🍎 iOS (Swift 6)" : (activeTab === "kotlin" ? "🤖 Android (Kotlin)" : "🍎 iOS (Swift 6)")}</span>
+                </div>
+                <div class="mac-actions">
+                  <button class="view-mode-toggle" onclick="toggleCodeViewMode()" title="Toggle Side-by-Side or Tabbed Code View">
+                    ${codeViewMode === "split" ? "⊟ Switch to Tabbed" : "⊞ Switch to Split View"}
+                  </button>
+                </div>
+              </div>
+
+              ${codeViewMode === "split" ? `
+                <div class="code-comparison" style="margin:0;">
+                  <div class="code-pane" style="box-shadow:none;border:none;border-radius:0;">
+                    <div class="code-header code-header-kotlin">
+                      <span>🤖 KOTLIN / COMPOSE</span>
+                      <button class="copy-btn" onclick="copyText(this, '${encodeURIComponent(step.kotlinCode)}')">Copy</button>
+                    </div>
+                    <pre class="code-block"><code>${highlightCode(step.kotlinCode)}</code></pre>
+                  </div>
+                  <div class="code-pane" style="box-shadow:none;border:none;border-radius:0;border-left:1px solid rgba(255,255,255,0.08);">
+                    <div class="code-header code-header-swift">
+                      <span>🍎 SWIFT 6 / SWIFTUI</span>
+                      <button class="copy-btn" onclick="copyText(this, '${encodeURIComponent(step.swiftCode)}')">Copy</button>
+                    </div>
+                    <pre class="code-block"><code>${highlightCode(step.swiftCode)}</code></pre>
+                  </div>
+                </div>
+              ` : `
+                <div class="tabbed-code-nav">
+                  <button class="tabbed-code-tab ${activeTab === "kotlin" ? "active" : ""}" onclick="selectCodeTab('${stepKey}', 'kotlin')">
+                    🤖 Android (Kotlin)
+                  </button>
+                  <button class="tabbed-code-tab ${activeTab === "swift" ? "active" : ""}" onclick="selectCodeTab('${stepKey}', 'swift')">
+                    🍎 iOS (Swift 6)
+                  </button>
+                </div>
+                <div class="code-pane" style="box-shadow:none;border:none;border-radius:0;">
+                  <div class="code-header" style="justify-content:flex-end;">
+                    <button class="copy-btn" onclick="copyText(this, '${encodeURIComponent(activeTab === "kotlin" ? step.kotlinCode : step.swiftCode)}')">Copy</button>
+                  </div>
+                  <pre class="code-block"><code>${highlightCode(activeTab === "kotlin" ? step.kotlinCode : step.swiftCode)}</code></pre>
+                </div>
+              `}
+            </div>
+
+            <!-- Inline Checkpoint (Quick Comprehension Check) -->
+            <div class="inline-checkpoint-card">
+              <div class="inline-checkpoint-header">
+                <span class="inline-checkpoint-badge">⚡ Quick Checkpoint</span>
+                <span class="inline-checkpoint-xp">+10 XP</span>
+              </div>
+              <div class="inline-checkpoint-question">${formatInlineCode(checkpoint.question)}</div>
+              <div class="inline-checkpoint-options">
+                ${checkpoint.options.map((opt, oIdx) => {
+                  let btnCls = "checkpoint-opt-btn";
+                  if (hasAnsweredCheckpoint) {
+                    if (oIdx === checkpoint.correctIndex) btnCls += " correct";
+                    else if (oIdx === answeredOption) btnCls += " wrong";
+                  }
+                  return `
+                    <button class="${btnCls}" onclick="answerCheckpoint(${weekObj.week}, ${step.day}, ${oIdx})">
+                      <span style="font-weight:800;color:var(--text-muted);">${String.fromCharCode(65 + oIdx)}.</span>
+                      <span>${formatInlineCode(opt)}</span>
+                    </button>
+                  `;
+                }).join("")}
+              </div>
+              <div class="checkpoint-feedback-box ${hasAnsweredCheckpoint ? "visible" : ""}" style="background:var(--bg-surface-elevated);border-left:4px solid ${answeredOption === checkpoint.correctIndex ? "var(--accent-green)" : "var(--accent-danger)"};">
+                <strong>${answeredOption === checkpoint.correctIndex ? "✅ Correct!" : "❌ Explanation:"}</strong> ${formatInlineCode(checkpoint.explanation)}
+              </div>
+            </div>
+
+            <!-- Step Navigation Footer -->
+            <div class="daily-lesson-footer">
+              <div>
+                ${step.day > 1 ? `
+                  <button class="btn" onclick="selectDay(${step.day - 1})">
+                    ← Previous: Day ${step.day - 1}
+                  </button>
+                ` : `
+                  <button class="btn" onclick="selectTab('roadmap')">
+                    ← Back to Roadmap
+                  </button>
+                `}
+              </div>
+              <div>
+                ${currentDay > 0 && currentDay < 5 ? `
+                  <button class="btn btn-primary" onclick="selectDay(${currentDay + 1})">
+                    Next: Day ${currentDay + 1} →
+                  </button>
+                ` : currentDay === 5 ? `
+                  <button class="btn btn-primary" onclick="selectTab('practice')">
+                    Day 5 Done! Take the Week ${weekObj.week} Quiz & Lab →
+                  </button>
+                ` : ""}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
     }
-  } else {
-    feedbackEl.style.background = "var(--accent-danger-soft)";
-    feedbackEl.style.border = "1px solid var(--accent-danger)";
-    feedbackEl.innerHTML = `<strong>⚠️ Missing Required Swift Constructs:</strong> Make sure your code includes: <code>${missing.join("</code>, <code>")}</code>.`;
-  }
-};
 
-window.showChallengeSolution = function(weekNum) {
-  const weekObj = WEEKS_DATA.find(w => w.week === weekNum);
-  const editor = document.getElementById("challenge-editor");
-  if (editor && weekObj) {
-    editor.value = weekObj.codeChallenge.solutionCode;
-    window.verifyCodeChallenge(weekNum);
-  }
-};
+    bodyHtml += renderFlashcardsSection(weekObj);
 
-// ============================================================================
-// ROADMAP & ORIENTATION VIEW
-// ============================================================================
+    bodyHtml += `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1.5rem;">
+        <button class="btn" onclick="selectTab('roadmap')">← Back to Roadmap</button>
+        <button class="btn btn-primary" onclick="selectTab('practice')">
+          Next: Take the Week ${weekObj.week} Quiz & Lab →
+        </button>
+      </div>
+    `;
+  } else if (currentTab === "practice") {
+    const savedForWeek = quizAnswers[weekObj.week] || {};
+
+    const quizHtml = weekObj.quiz.map((q, qIdx) => {
+      const selectedIdx = savedForWeek[qIdx];
+      const hasAnswered = selectedIdx !== undefined;
+      return `
+        <div id="quiz-q-${qIdx}" style="margin-bottom:1.6rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border-subtle);">
+          <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.55rem;">
+            <span class="pill pill-swift" style="font-size:0.72rem;">Question ${qIdx + 1} of ${weekObj.quiz.length}</span>
+            <span style="font-weight:700;font-size:0.96rem;">${formatInlineCode(q.question.replace(/^\d+\.\s*/, ""))}</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr;gap:0.45rem;">
+            ${q.options.map((opt, oIdx) => {
+              let cls = "quiz-option";
+              if (hasAnswered) {
+                if (oIdx === q.correctIndex) cls += " correct";
+                else if (oIdx === selectedIdx) cls += " wrong";
+              }
+              return `
+                <button class="${cls}" onclick="answerQuiz(${weekObj.week}, ${qIdx}, ${oIdx})">
+                  <span style="font-weight:800;color:var(--text-muted);margin-right:0.4rem;">${String.fromCharCode(65 + oIdx)}.</span>
+                  <span>${formatInlineCode(opt)}</span>
+                </button>
+              `;
+            }).join("")}
+          </div>
+          <div id="quiz-fb-${qIdx}" class="feedback-box ${hasAnswered ? "visible" : ""}" style="background:var(--bg-surface-elevated);border-left:4px solid ${selectedIdx === q.correctIndex ? "var(--accent-green)" : "var(--accent-danger)"};margin-top:0.65rem;">
+            <strong>${selectedIdx === q.correctIndex ? "✅ Correct!" : "❌ Android-to-iOS Explanation:"}</strong> ${formatInlineCode(q.explanation)}
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    bodyHtml = `
+      <div class="section-card">
+        <div class="quiz-scoreboard">
+          <div>
+            <div class="quiz-score-pill">🏆 Week ${weekObj.week} Score: ${quizScore.correct} / ${quizScore.total} Correct (${quizScore.answered} Answered)</div>
+            <div style="font-size:0.82rem;color:var(--text-secondary);margin-top:0.25rem;">Answer correctly to earn +15 XP each!</div>
+          </div>
+          <button class="btn" onclick="resetWeekQuiz(${weekObj.week})">🔄 Reset Quiz</button>
+        </div>
+
+        <!-- Quiz Progress Stepper Dots -->
+        <div class="quiz-stepper-header">
+          <span style="font-size:0.78rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Quick Navigation:</span>
+          <div class="quiz-stepper-dots">
+            ${weekObj.quiz.map((q, idx) => {
+              const ans = savedForWeek[idx];
+              let dotClass = "quiz-dot";
+              if (ans !== undefined) {
+                dotClass += (ans === q.correctIndex ? " correct" : " wrong");
+              }
+              return `
+                <button class="${dotClass}" onclick="document.getElementById('quiz-q-${idx}')?.scrollIntoView({behavior:'smooth',block:'center'});">
+                  ${idx + 1}
+                </button>
+              `;
+            }).join("")}
+          </div>
+        </div>
+
+        ${quizHtml}
+      </div>
+
+      <div class="section-card">
+        <h2>💻 Hands-On Coding Lab (Week ${weekObj.week})</h2>
+        <p style="color:var(--text-secondary);margin-bottom:1rem;">${weekObj.codeChallenge.instructions}</p>
+        <textarea id="challenge-editor" class="code-editor-input" spellcheck="false">${weekObj.codeChallenge.starterCode}</textarea>
+        <div style="display:flex;gap:0.75rem;margin-top:0.85rem;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="verifyCodeChallenge(${weekObj.week})">▶️ Compile & Verify Solution</button>
+          <button class="btn" onclick="showChallengeSolution(${weekObj.week})">👀 Reveal Solution</button>
+        </div>
+        <div id="challenge-feedback" class="feedback-box"></div>
+      </div>
+    `;
+  } else if (currentTab === "linkedin") {
+    bodyHtml = `
+      <div class="section-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
+          <div>
+            <h2>📣 Format 1: LinkedIn Short-Form Feed Post (Week ${weekObj.week})</h2>
+            <p style="color:var(--text-secondary);font-size:0.9rem;">High-engagement feed post with hook, numbered takeaways, and your live tutorial link.</p>
+          </div>
+          <button class="btn btn-primary" onclick="copyText(this, '${encodeURIComponent(weekObj.linkedinPost)}')">
+            📋 Copy Feed Post
+          </button>
+        </div>
+        <div class="linkedin-box">${escapeHtml(weekObj.linkedinPost)}</div>
+      </div>
+
+      ${weekObj.linkedinArticle ? `
+        <div class="section-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
+            <div>
+              <h2>📰 Format 2: Full Long-Form LinkedIn Article (Week ${weekObj.week})</h2>
+              <p style="color:var(--text-secondary);font-size:0.9rem;">In-depth technical breakdown comparing Android and iOS architecture.</p>
+            </div>
+            <button class="btn btn-primary" onclick="copyText(this, '${encodeURIComponent(weekObj.linkedinArticle)}')">
+              📋 Copy Full Article
+            </button>
+          </div>
+          <div class="linkedin-box">${escapeHtml(weekObj.linkedinArticle)}</div>
+        </div>
+      ` : ""}
+    `;
+  }
+
+  container.innerHTML = tabsHtml + breadcrumbHtml + headerHtml + bodyHtml;
+}
+
+// 10-Week Visual Roadmap View
 function renderRoadmapView() {
+  const completedCount = completedWeeks.length;
+  const totalCount = WEEKS_DATA.length || 10;
+  const pct = Math.round((completedCount / totalCount) * 100);
+
   return `
     <div class="hero-card">
-      <span class="pill pill-swift">The Beginner-Friendly 10-Week Journey</span>
-      <h1 style="margin-top:0.55rem;">From Android to iOS: The Master Roadmap</h1>
-      <p>Designed specifically for Android developers. No overwhelming memory theory on Day 1—start with familiar syntax, build real SwiftUI screens early, master architecture, and finish with shipping to TestFlight before New Year.</p>
-    </div>
-
-    <!-- 5 PROGRESSIVE PHASES -->
-    <div class="phase-card">
-      <span class="phase-badge">Phase 1: Speaking Swift (Weeks 1 – 2)</span>
-      <h2>Getting Comfortable with the Language</h2>
-      <p style="color:var(--text-secondary);font-size:0.92rem;">Map your Kotlin muscle memory to Swift without getting overwhelmed by internal runtime mechanics.</p>
-      <div class="phase-weeks-grid">
-        <div class="phase-week-box" onclick="selectWeek(1);">
-          <div>
-            <span class="week-num">Week 1 · Oct 20 - 26</span>
-            <div style="font-weight:700;font-size:1rem;margin:0.25rem 0;">Swift Basics for Android Devs</div>
-            <div style="font-size:0.83rem;color:var(--text-secondary);">Syntax quirks, argument labels, optionals without fear, and simple Structs vs Classes.</div>
-          </div>
-          <div style="margin-top:0.85rem;color:var(--accent-primary-text);font-weight:700;font-size:0.82rem;">Start Week 1 →</div>
-        </div>
-        <div class="phase-week-box" onclick="selectWeek(2);">
-          <div>
-            <span class="week-num">Week 2 · Oct 27 - Nov 02</span>
-            <div style="font-weight:700;font-size:1rem;margin:0.25rem 0;">Protocols, Extensions & Errors</div>
-            <div style="font-size:0.83rem;color:var(--text-secondary);">Kotlin interfaces vs Swift protocols, retroactive extensions, and explicit error handling.</div>
-          </div>
-          <div style="margin-top:0.85rem;color:var(--accent-primary-text);font-weight:700;font-size:0.82rem;">Start Week 2 →</div>
-        </div>
+      <span class="pill pill-swift">10-WEEK ACADEMIC SYLLABUS · OCT 20 TO DEC 31</span>
+      <h1 style="margin-top:0.6rem;">📱 Android to iOS Before New Year</h1>
+      <p style="margin-top:0.35rem;">
+        Master modern iOS (Swift 6, SwiftUI, Swift Concurrency, SwiftData) by leveraging your hard-earned Android mental models.
+      </p>
+      <div class="hero-meta-row">
+        <span class="pill pill-kotlin">Progress: ${completedCount} / ${totalCount} Weeks (${pct}%)</span>
+        <span class="pill pill-swift">Total Micro-Lessons: 50 Daily Steps</span>
+        <span class="pill xp-pill">⚡ ${calculateTotalXP()} XP Earned</span>
       </div>
     </div>
 
-    <div class="phase-card">
-      <span class="phase-badge">Phase 2: First UI & Visual Wins (Weeks 3 – 4)</span>
-      <h2>Building Real UI with SwiftUI</h2>
-      <p style="color:var(--text-secondary);font-size:0.92rem;">Translate your Jetpack Compose knowledge into native iOS screens with instant visual feedback.</p>
-      <div class="phase-weeks-grid">
-        <div class="phase-week-box" onclick="selectWeek(3);">
-          <div>
-            <span class="week-num">Week 3 · Nov 03 - 09</span>
-            <div style="font-weight:700;font-size:1rem;margin:0.25rem 0;">SwiftUI Foundations (Compose ➔ SwiftUI)</div>
-            <div style="font-size:0.83rem;color:var(--text-secondary);">@Composable to View structs, VStack/HStack/ZStack, modifier wrapping order, and Xcode Previews.</div>
+    <!-- 5 PEDAGOGICAL MODULE CARDS -->
+    ${COURSE_MODULES.map(mod => {
+      return `
+        <div class="phase-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;">
+            <span class="phase-badge">${mod.title}</span>
+            <span style="font-size:0.78rem;font-weight:700;color:var(--accent-primary);">${mod.badge}</span>
           </div>
-          <div style="margin-top:0.85rem;color:var(--accent-primary-text);font-weight:700;font-size:0.82rem;">Start Week 3 →</div>
-        </div>
-        <div class="phase-week-box" onclick="selectWeek(4);">
-          <div>
-            <span class="week-num">Week 4 · Nov 10 - 16</span>
-            <div style="font-weight:700;font-size:1rem;margin:0.25rem 0;">State Management & @Observable</div>
-            <div style="font-size:0.83rem;color:var(--text-secondary);">remember vs @State, two-way $ bindings, and modern MVVM with the @Observable macro.</div>
+          <p style="color:var(--text-secondary);font-size:0.88rem;margin:0.4rem 0 1rem;">${mod.subtitle}</p>
+          <div class="phase-weeks-grid">
+            ${mod.weeks.map(weekNum => {
+              const w = WEEKS_DATA.find(item => item.week === weekNum);
+              if (!w) return "";
+              const isDone = completedWeeks.includes(w.week);
+              const score = getWeekQuizScore(w.week);
+              return `
+                <div class="phase-week-box ${isDone ? "completed" : ""}" onclick="selectWeek(${w.week});">
+                  <div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                      <span class="week-num">Week ${w.week} · ${w.dates}</span>
+                      <span class="week-check" style="width:18px;height:18px;font-size:0.65rem;">${isDone ? "✓" : ""}</span>
+                    </div>
+                    <div style="font-weight:700;font-size:1rem;margin:0.35rem 0 0.25rem;">${escapeHtml(w.title)}</div>
+                    <div style="font-size:0.8rem;color:var(--text-secondary);line-height:1.4;">${escapeHtml(w.subtitle)}</div>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.85rem;padding-top:0.65rem;border-top:1px solid var(--border-color);">
+                    <span style="font-size:0.74rem;color:var(--text-muted);font-weight:600;">Quiz: ${score.correct}/${score.total}</span>
+                    <span style="color:var(--accent-primary);font-weight:700;font-size:0.82rem;">Start Week ${w.week} →</span>
+                  </div>
+                </div>
+              `;
+            }).join("")}
           </div>
-          <div style="margin-top:0.85rem;color:var(--accent-primary-text);font-weight:700;font-size:0.82rem;">Start Week 4 →</div>
         </div>
-      </div>
-    </div>
-
-    <div class="phase-card">
-      <span class="phase-badge">Phase 3: Real App Architecture (Weeks 5 – 6)</span>
-      <h2>Concurrency, Lists & Multi-Screen Navigation</h2>
-      <div class="phase-weeks-grid">
-        <div class="phase-week-box" onclick="selectWeek(5);">
-          <div>
-            <span class="week-num">Week 5 · Nov 17 - 23</span>
-            <div style="font-weight:700;font-size:1rem;margin:0.25rem 0;">Concurrency, Actors & @MainActor</div>
-            <div style="font-size:0.83rem;color:var(--text-secondary);">Coroutines vs async/await, view lifecycle tasks (.task), and compile-time thread safety with actors.</div>
-          </div>
-          <div style="margin-top:0.85rem;color:var(--accent-primary-text);font-weight:700;font-size:0.82rem;">Start Week 5 →</div>
-        </div>
-        <div class="phase-week-box" onclick="selectWeek(6);">
-          <div>
-            <span class="week-num">Week 6 · Nov 24 - 30</span>
-            <div style="font-weight:700;font-size:1rem;margin:0.25rem 0;">NavigationStack & App Lifecycle</div>
-            <div style="font-size:0.83rem;color:var(--text-secondary);">LazyColumn to List, state-driven NavigationStack backstack, and bottom sheets.</div>
-          </div>
-          <div style="margin-top:0.85rem;color:var(--accent-primary-text);font-weight:700;font-size:0.82rem;">Start Week 6 →</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="phase-card">
-      <span class="phase-badge">Phase 4: Data, Networking & Storage (Weeks 7 – 8)</span>
-      <h2>Real API Integration & Offline Persistence</h2>
-      <div class="phase-weeks-grid">
-        <div class="phase-week-box" onclick="selectWeek(7);">
-          <div>
-            <span class="week-num">Week 7 · Dec 01 - 07</span>
-            <div style="font-weight:700;font-size:1rem;margin:0.25rem 0;">Networking & Codable (No Retrofit Needed!)</div>
-            <div style="font-size:0.83rem;color:var(--text-secondary);">URLSession with async/await, JSON parsing with Codable, and clean protocol DI without Hilt.</div>
-          </div>
-          <div style="margin-top:0.85rem;color:var(--accent-primary-text);font-weight:700;font-size:0.82rem;">Start Week 7 →</div>
-        </div>
-        <div class="phase-week-box" onclick="selectWeek(8);">
-          <div>
-            <span class="week-num">Week 8 · Dec 08 - 14</span>
-            <div style="font-weight:700;font-size:1rem;margin:0.25rem 0;">Room vs. SwiftData & Keychain</div>
-            <div style="font-size:0.83rem;color:var(--text-secondary);">@Model persistence, live @Query streams, @AppStorage, and hardware-backed Keychain security.</div>
-          </div>
-          <div style="margin-top:0.85rem;color:var(--accent-primary-text);font-weight:700;font-size:0.82rem;">Start Week 8 →</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="phase-card">
-      <span class="phase-badge">Phase 5: Under the Hood & Shipping (Weeks 9 – 10)</span>
-      <h2>Memory Internals, Unit Testing & TestFlight</h2>
-      <div class="phase-weeks-grid">
-        <div class="phase-week-box" onclick="selectWeek(9);">
-          <div>
-            <span class="week-num">Week 9 · Dec 15 - 21</span>
-            <div style="font-weight:700;font-size:1rem;margin:0.25rem 0;">Memory Internals (ARC) & Swift Testing</div>
-            <div style="font-size:0.83rem;color:var(--text-secondary);">Now that you know ViewModels: dive into ARC, retain cycles, [weak self], and modern Swift Testing.</div>
-          </div>
-          <div style="margin-top:0.85rem;color:var(--accent-primary-text);font-weight:700;font-size:0.82rem;">Start Week 9 →</div>
-        </div>
-        <div class="phase-week-box" onclick="selectWeek(10);">
-          <div>
-            <span class="week-num">Week 10 · Dec 22 - 31</span>
-            <div style="font-weight:700;font-size:1rem;margin:0.25rem 0;">Capstone App & Shipping to TestFlight</div>
-            <div style="font-size:0.83rem;color:var(--text-secondary);">SPM modularization, .xcconfig flavors, provisioning profiles, and year-end retrospective!</div>
-          </div>
-          <div style="margin-top:0.85rem;color:var(--accent-primary-text);font-weight:700;font-size:0.82rem;">Start Week 10 →</div>
-        </div>
-      </div>
-    </div>
+      `;
+    }).join("")}
 
     <!-- ANDROID STUDIO TO XCODE SURVIVAL GUIDE -->
     <div class="section-card">
@@ -859,7 +1414,7 @@ function renderRoadmapView() {
           <tr>
             <td><strong>Device Manager / Emulator</strong></td>
             <td><strong>iOS Simulator</strong> (<code>Cmd + R</code>)</td>
-            <td>Launches an ultra-fast, smooth native macOS simulator for any iPhone or iPad.</td>
+            <td>Launches an ultra-fast native simulator for any iPhone, iPad, or Apple Watch.</td>
           </tr>
           <tr>
             <td><strong>Project Tool Window</strong></td>
@@ -869,7 +1424,7 @@ function renderRoadmapView() {
           <tr>
             <td><strong>Compose Interactive Preview</strong></td>
             <td><strong>Xcode Canvas (<code>#Preview</code>)</strong></td>
-            <td>Toggle with <code>Option + Cmd + Enter</code>. Shows live interactive preview of your SwiftUI view.</td>
+            <td>Toggle with <code>Option + Cmd + Enter</code>. Real-time interactive preview of SwiftUI views.</td>
           </tr>
           <tr>
             <td><strong>build.gradle.kts (Dependencies)</strong></td>
@@ -879,7 +1434,7 @@ function renderRoadmapView() {
           <tr>
             <td><strong>AndroidManifest.xml</strong></td>
             <td><strong>Target Settings / Info.plist</strong></td>
-            <td>Click the project root ➔ Targets ➔ Info / Signing & Capabilities for permissions and bundle ID.</td>
+            <td>Click project root ➔ Targets ➔ Info / Signing & Capabilities for permissions and bundle ID.</td>
           </tr>
         </tbody>
       </table>
@@ -931,369 +1486,147 @@ function renderRoadmapView() {
         </div>
       </div>
     </div>
-
-    <!-- SWIFT PLAYGROUNDS QUICKSTART -->
-    <div class="section-card">
-      <h2>🚀 Swift Playgrounds in 60 Seconds: Your Scratchpad</h2>
-      <p style="color:var(--text-secondary);margin-bottom:0.75rem;">
-        Don't want to create a whole iOS app just to test a Swift function or algorithm? Use a <strong>Swift Playground</strong> (equivalent to Kotlin Scratch / REPL):
-      </p>
-      <ol class="concept-details-list">
-        <li>Open <strong>Xcode</strong> ➔ Click <strong>File ➔ New ➔ Playground</strong> (or download the standalone <em>Swift Playgrounds</em> app from the Mac App Store).</li>
-        <li>Select <strong>Blank</strong> (iOS or macOS) ➔ Click <strong>Create</strong>.</li>
-        <li>Write your Swift code directly: <code>let names = ["Android", "iOS"]; print(names)</code>.</li>
-        <li>Click the blue <strong>▶ Play button</strong> at the bottom or line gutter to execute instantly!</li>
-      </ol>
-      <div style="margin-top:1.25rem;">
-        <button class="btn btn-primary" onclick="selectWeek(1);">
-          Ready? Start Week 1: Swift Basics for Android Devs →
-        </button>
-      </div>
-    </div>
   `;
 }
 
-// Rosetta Stone
+// Rosetta Stone Interactive Matrix
 function renderRosettaView() {
+  const categories = Array.from(new Set(ROSETTA_ITEMS.map(i => i.category)));
+
   return `
-    <div class="section-card">
-      <h2>🗺️ The Complete Android ↔ iOS Rosetta Stone</h2>
-      <p style="color:var(--text-secondary);margin-bottom:1rem;">
-        Filter any Android concept (Kotlin, Compose, Coroutines, Hilt, Room, Retrofit, JUnit, Gradle) to immediately see its modern iOS equivalent and architectural mental shift.
-      </p>
-      <input
-        type="search"
-        id="rosetta-search-input"
-        class="rosetta-search"
-        placeholder="Search e.g. 'StateFlow', 'data class', 'Room', 'Retrofit', 'guard', 'ARC', 'JUnit'..."
-        oninput="filterRosettaTable(this.value)"
-      />
-      <div style="overflow-x:auto;">
-        <table class="rosetta-table">
-          <thead>
-            <tr>
-              <th>Category</th>
-              <th>Concept</th>
-              <th>Android (Kotlin / Compose)</th>
-              <th>iOS (Swift 6 / SwiftUI)</th>
-              <th>Key Mental Shift</th>
-            </tr>
-          </thead>
-          <tbody id="rosetta-tbody">
-            ${ROSETTA_ITEMS.map(item => `
-              <tr>
-                <td><span class="pill pill-kotlin">${item.category}</span></td>
-                <td><strong>${item.concept}</strong></td>
-                <td><code>${escapeHtml(item.android)}</code></td>
-                <td><code>${escapeHtml(item.ios)}</code></td>
-                <td>${item.shift}</td>
-              </tr>
-            `).join("")}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  `;
-}
-
-window.filterRosettaTable = function(query) {
-  const q = query.toLowerCase().trim();
-  const tbody = document.getElementById("rosetta-tbody");
-  if (!tbody) return;
-  const filtered = ROSETTA_ITEMS.filter(item =>
-    item.category.toLowerCase().includes(q) ||
-    item.concept.toLowerCase().includes(q) ||
-    item.android.toLowerCase().includes(q) ||
-    item.ios.toLowerCase().includes(q) ||
-    item.shift.toLowerCase().includes(q)
-  );
-  tbody.innerHTML = filtered.map(item => `
-    <tr>
-      <td><span class="pill pill-kotlin">${item.category}</span></td>
-      <td><strong>${item.concept}</strong></td>
-      <td><code>${escapeHtml(item.android)}</code></td>
-      <td><code>${escapeHtml(item.ios)}</code></td>
-      <td>${item.shift}</td>
-    </tr>
-  `).join("");
-};
-
-// ============================================================================
-// MAIN CONTENT RENDERER
-// ============================================================================
-function renderMainContent() {
-  const container = document.getElementById("main-content");
-  if (!container) return;
-
-  const weekObj = WEEKS_DATA.find(w => w.week === currentWeekNum) || WEEKS_DATA[0];
-  const isCompleted = completedWeeks.includes(weekObj.week);
-  const quizScore = getWeekQuizScore(weekObj.week);
-
-  const tabsHtml = `
-    <div class="view-tabs">
-      <button class="tab-btn ${currentTab === "roadmap" ? "active" : ""}" onclick="selectTab('roadmap')">
-        🧭 1. Roadmap & Orientation
-      </button>
-      <button class="tab-btn ${currentTab === "learn" ? "active" : ""}" onclick="selectTab('learn')">
-        📖 2. Week ${weekObj.week} Daily Micro-Steps
-      </button>
-      <button class="tab-btn ${currentTab === "practice" ? "active" : ""}" onclick="selectTab('practice')">
-        🛠️ 3. Practice & Quiz (${quizScore.correct}/${quizScore.total})
-      </button>
-      <button class="tab-btn ${currentTab === "linkedin" ? "active" : ""}" onclick="selectTab('linkedin')">
-        ✍️ 4. LinkedIn Kit
-      </button>
-      <button class="tab-btn ${currentTab === "rosetta" ? "active" : ""}" onclick="selectTab('rosetta')">
-        🗺️ Rosetta Stone
-      </button>
-    </div>
-  `;
-
-  if (currentTab === "roadmap") {
-    container.innerHTML = tabsHtml + renderRoadmapView();
-    return;
-  }
-
-  if (currentTab === "rosetta") {
-    container.innerHTML = tabsHtml + renderRosettaView();
-    return;
-  }
-
-  const headerHtml = `
     <div class="hero-card">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap;">
-        <div>
-          <span class="pill pill-swift">Week ${weekObj.week} of 10 · ${weekObj.dates}</span>
-          <h1 style="margin-top:0.55rem;">${formatInlineCode(weekObj.title)}</h1>
-          <p>${formatInlineCode(weekObj.subtitle)}</p>
-        </div>
-        <button class="btn ${isCompleted ? "" : "btn-primary"}" onclick="toggleWeekComplete(${weekObj.week})">
-          ${isCompleted ? "✅ Completed (Click to Undo)" : "Mark Week " + weekObj.week + " Complete"}
-        </button>
-      </div>
-      <div class="hero-meta-row">
-        <span class="pill pill-kotlin">Android: ${formatInlineCode(weekObj.androidAnchor)}</span>
-        <span class="pill pill-swift">iOS: ${formatInlineCode(weekObj.iosAnchor)}</span>
-      </div>
+      <span class="pill pill-swift">ARCHITECTURAL MAPPING</span>
+      <h1 style="margin-top:0.6rem;">🗺️ The Android ↔ iOS Rosetta Stone</h1>
+      <p style="margin-top:0.35rem;">
+        Instant side-by-side dictionary mapping modern Android tools (Kotlin 2, Coroutines, Jetpack Compose, Room) directly to modern iOS (Swift 6, Swift Concurrency, SwiftUI, SwiftData).
+      </p>
     </div>
-  `;
 
-  let bodyHtml = "";
-
-  if (currentTab === "learn") {
-    bodyHtml += renderInteractiveSimulator(weekObj);
-
-    // DAILY MICRO-STEPS SELECTOR
-    if (weekObj.dailySteps && weekObj.dailySteps.length > 0) {
-      bodyHtml += `
-        <div class="day-selector-bar">
-          <span style="font-size:0.75rem;font-weight:800;color:var(--text-muted);text-transform:uppercase;margin-right:0.35rem;">Daily Steps:</span>
-          ${weekObj.dailySteps.map(step => `
-            <button class="day-btn ${currentDay === step.day ? "active" : ""}" onclick="selectDay(${step.day})">
-              Day ${step.day} (${step.time || "15m"})
-            </button>
-          `).join("")}
-          <button class="day-btn ${currentDay === 0 ? "active" : ""}" onclick="selectDay(0)">
-            📚 View All Days
-          </button>
-        </div>
-      `;
-
-      const stepsToRender = currentDay === 0
-        ? weekObj.dailySteps
-        : weekObj.dailySteps.filter(s => s.day === currentDay);
-
-      bodyHtml += stepsToRender.map(step => `
-        <div class="daily-step-card">
-          <div class="daily-step-header">
-            <div>
-              <span class="pill pill-swift">Day ${step.day} of 5 · ⏱️ ${step.time || "15 mins"}</span>
-              <h2 style="margin-top:0.35rem;">${formatInlineCode(step.title)}</h2>
-            </div>
-          </div>
-          <div class="daily-goal-pill">🎯 Goal: ${formatInlineCode(step.goal)}</div>
-          <div class="mental-shift-banner">
-            <strong>💡 Key Mental Shift:</strong> ${formatInlineCode(step.shift)}
-          </div>
-          ${step.details && step.details.length ? `
-            <ul class="concept-details-list">
-              ${step.details.map(d => `<li>${formatInlineCode(d)}</li>`).join("")}
-            </ul>
-          ` : ""}
-          <div class="code-comparison">
-            <div class="code-pane">
-              <div class="code-header code-header-kotlin">
-                <span>🤖 ANDROID (KOTLIN / COMPOSE)</span>
-                <button class="copy-btn" onclick="copyText(this, '${encodeURIComponent(step.kotlinCode)}')">Copy</button>
-              </div>
-              <pre class="code-block"><code>${highlightCode(step.kotlinCode)}</code></pre>
-            </div>
-            <div class="code-pane">
-              <div class="code-header code-header-swift">
-                <span>🍎 iOS (SWIFT 6 / SWIFTUI)</span>
-                <button class="copy-btn" onclick="copyText(this, '${encodeURIComponent(step.swiftCode)}')">Copy</button>
-              </div>
-              <pre class="code-block"><code>${highlightCode(step.swiftCode)}</code></pre>
-            </div>
-          </div>
-
-          ${currentDay > 0 && currentDay < 5 ? `
-            <div style="display:flex;justify-content:flex-end;margin-top:1.25rem;">
-              <button class="btn btn-primary" onclick="selectDay(${currentDay + 1})">
-                Next: Day ${currentDay + 1} →
-              </button>
-            </div>
-          ` : currentDay === 5 ? `
-            <div style="display:flex;justify-content:flex-end;margin-top:1.25rem;">
-              <button class="btn btn-primary" onclick="selectTab('practice')">
-                Day 5 Done! Take the Week ${weekObj.week} Quiz & Lab →
-              </button>
-            </div>
-          ` : ""}
-        </div>
-      `).join("");
-    } else {
-      // Fallback for full concepts view
-      bodyHtml += weekObj.concepts.map(c => `
-        <div class="section-card">
-          <h2>${formatInlineCode(c.heading)}</h2>
-          <div class="mental-shift-banner">
-            <strong>💡 Key Mental Shift:</strong> ${formatInlineCode(c.shift)}
-          </div>
-          ${c.details && c.details.length ? `
-            <ul class="concept-details-list">
-              ${c.details.map(d => `<li>${formatInlineCode(d)}</li>`).join("")}
-            </ul>
-          ` : ""}
-          <div class="code-comparison">
-            <div class="code-pane">
-              <div class="code-header code-header-kotlin">
-                <span>🤖 ANDROID (KOTLIN / COMPOSE)</span>
-                <button class="copy-btn" onclick="copyText(this, '${encodeURIComponent(c.kotlinCode)}')">Copy</button>
-              </div>
-              <pre class="code-block"><code>${highlightCode(c.kotlinCode)}</code></pre>
-            </div>
-            <div class="code-pane">
-              <div class="code-header code-header-swift">
-                <span>🍎 iOS (SWIFT 6 / SWIFTUI)</span>
-                <button class="copy-btn" onclick="copyText(this, '${encodeURIComponent(c.swiftCode)}')">Copy</button>
-              </div>
-              <pre class="code-block"><code>${highlightCode(c.swiftCode)}</code></pre>
-            </div>
-          </div>
-        </div>
-      `).join("");
-    }
-
-    bodyHtml += renderFlashcardsSection(weekObj);
-
-    bodyHtml += `
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1.5rem;">
-        <button class="btn" onclick="selectTab('roadmap')">← Back to Roadmap</button>
-        <button class="btn btn-primary" onclick="selectTab('practice')">
-          Next: Take the Week ${weekObj.week} Quiz & Lab →
-        </button>
-      </div>
-    `;
-  } else if (currentTab === "practice") {
-    const savedForWeek = quizAnswers[weekObj.week] || {};
-
-    const quizHtml = weekObj.quiz.map((q, qIdx) => {
-      const selectedIdx = savedForWeek[qIdx];
-      const hasAnswered = selectedIdx !== undefined;
+    ${categories.map(cat => {
+      const items = ROSETTA_ITEMS.filter(i => i.category === cat);
       return `
-        <div id="quiz-q-${qIdx}" style="margin-bottom:1.6rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border-subtle);">
-          <p style="font-weight:600;margin-bottom:0.65rem;">${formatInlineCode(q.question)}</p>
-          ${q.options.map((opt, oIdx) => {
-            let cls = "quiz-option";
-            if (hasAnswered) {
-              if (oIdx === q.correctIndex) cls += " correct";
-              else if (oIdx === selectedIdx) cls += " wrong";
-            }
-            return `
-              <button class="${cls}" onclick="answerQuiz(${weekObj.week}, ${qIdx}, ${oIdx})">
-                ${formatInlineCode(opt)}
-              </button>
-            `;
-          }).join("")}
-          <div id="quiz-fb-${qIdx}" class="feedback-box ${hasAnswered ? "visible" : ""}" style="background:var(--bg-surface-elevated);border-left:4px solid ${selectedIdx === q.correctIndex ? "var(--accent-green)" : "var(--accent-danger)"};">
-            <strong>${selectedIdx === q.correctIndex ? "✅ Correct!" : "❌ Explanation:"}</strong> ${formatInlineCode(q.explanation)}
-          </div>
+        <div class="section-card">
+          <h2>${cat}</h2>
+          <table class="rosetta-table">
+            <thead>
+              <tr>
+                <th style="width:22%;">Concept</th>
+                <th style="width:28%;">Android (Modern)</th>
+                <th style="width:28%;">iOS (Swift 6 / SwiftUI)</th>
+                <th style="width:22%;">Key Mental Shift</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items.map(item => `
+                <tr>
+                  <td><strong>${item.concept}</strong></td>
+                  <td><code class="tok-kw">${escapeHtml(item.android)}</code></td>
+                  <td><code class="tok-str">${escapeHtml(item.ios)}</code></td>
+                  <td style="font-size:0.84rem;color:var(--text-secondary);">${formatInlineCode(item.shift)}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
         </div>
       `;
-    }).join("");
-
-    bodyHtml = `
-      <div class="section-card">
-        <div class="quiz-scoreboard">
-          <div>
-            <div class="quiz-score-pill">🏆 Week ${weekObj.week} Score: ${quizScore.correct} / ${quizScore.total} Correct (${quizScore.answered} Answered)</div>
-            <div style="font-size:0.82rem;color:var(--text-secondary);">Answer questions correctly to earn +15 XP each and mark the week complete!</div>
-          </div>
-          <button class="btn" onclick="resetWeekQuiz(${weekObj.week})">🔄 Reset Quiz</button>
-        </div>
-        ${quizHtml}
-      </div>
-
-      <div class="section-card">
-        <h2>💻 Hands-On Coding Lab (Week ${weekObj.week})</h2>
-        <p style="color:var(--text-secondary);margin-bottom:1rem;">${weekObj.codeChallenge.instructions}</p>
-        <textarea id="challenge-editor" class="code-editor-input" spellcheck="false">${weekObj.codeChallenge.starterCode}</textarea>
-        <div style="display:flex;gap:0.75rem;margin-top:0.85rem;flex-wrap:wrap;">
-          <button class="btn btn-primary" onclick="verifyCodeChallenge(${weekObj.week})">▶️ Compile & Verify Solution</button>
-          <button class="btn" onclick="showChallengeSolution(${weekObj.week})">👀 Reveal Solution</button>
-        </div>
-        <div id="challenge-feedback" class="feedback-box"></div>
-      </div>
-    `;
-  } else if (currentTab === "linkedin") {
-    bodyHtml = `
-      <div class="section-card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
-          <div>
-            <h2>📣 Format 1: LinkedIn Short-Form Feed Post (Week ${weekObj.week})</h2>
-            <p style="color:var(--text-secondary);font-size:0.9rem;">High-engagement feed post with hook, numbered takeaways, and your live tutorial link.</p>
-          </div>
-          <button class="btn btn-primary" onclick="copyText(this, '${encodeURIComponent(weekObj.linkedinPost)}')">
-            📋 Copy Feed Post
-          </button>
-        </div>
-        <div class="linkedin-box">${escapeHtml(weekObj.linkedinPost)}</div>
-      </div>
-
-      ${weekObj.linkedinArticle ? `
-        <div class="section-card">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
-            <div>
-              <h2>📰 Format 2: Full Long-Form LinkedIn Article (Week ${weekObj.week})</h2>
-              <p style="color:var(--text-secondary);font-size:0.9rem;">Deep technical markdown article for LinkedIn Articles / Medium / Dev.to.</p>
-            </div>
-            <button class="btn btn-primary" onclick="copyText(this, '${encodeURIComponent(weekObj.linkedinArticle)}')">
-              📋 Copy Full Article
-            </button>
-          </div>
-          <div class="linkedin-box">${escapeHtml(weekObj.linkedinArticle)}</div>
-        </div>
-      ` : ""}
-    `;
-  }
-
-  container.innerHTML = tabsHtml + headerHtml + bodyHtml;
+    }).join("")}
+  `;
 }
 
-// Theme Switcher
-window.setTheme = function(themeName) {
-  document.documentElement.setAttribute("data-theme", themeName);
-  localStorage.setItem("ios_tutorial_theme_v3", themeName);
-  const sel = document.getElementById("theme-selector");
-  if (sel && sel.value !== themeName) sel.value = themeName;
-};
+// Quiz Answering Logic
+window.answerQuiz = function(weekNum, qIdx, oIdx) {
+  if (!quizAnswers[weekNum]) quizAnswers[weekNum] = {};
+  quizAnswers[weekNum][qIdx] = oIdx;
+  saveQuizAnswers();
 
-// Initialize App
-document.addEventListener("DOMContentLoaded", () => {
-  const savedTheme = localStorage.getItem("ios_tutorial_theme_v3") || "aurora";
-  window.setTheme(savedTheme);
-  updateProgressUI();
+  const weekObj = WEEKS_DATA.find(w => w.week === weekNum);
+  const q = weekObj.quiz[qIdx];
+  if (oIdx === q.correctIndex) {
+    launchConfetti();
+  }
+
+  const score = getWeekQuizScore(weekNum);
+  if (score.correct >= 8 && !completedWeeks.includes(weekNum)) {
+    completedWeeks.push(weekNum);
+    saveCompletedWeeks();
+  }
+
   renderSidebar();
   renderMainContent();
+};
+
+window.resetWeekQuiz = function(weekNum) {
+  if (quizAnswers[weekNum]) {
+    delete quizAnswers[weekNum];
+    saveQuizAnswers();
+    renderSidebar();
+    renderMainContent();
+  }
+};
+
+// Coding Lab Verification
+window.verifyCodeChallenge = function(weekNum) {
+  const weekObj = WEEKS_DATA.find(w => w.week === weekNum);
+  const editor = document.getElementById("challenge-editor");
+  const fb = document.getElementById("challenge-feedback");
+  if (!editor || !fb || !weekObj) return;
+
+  const code = editor.value;
+  const missing = [];
+  (weekObj.codeChallenge.requiredTokens || []).forEach(token => {
+    if (!code.includes(token)) missing.push(token);
+  });
+
+  if (missing.length === 0) {
+    fb.className = "feedback-box visible";
+    fb.style.background = "#d1fae5";
+    fb.style.borderLeft = "4px solid #10b981";
+    fb.style.color = "#065f46";
+    fb.innerHTML = `
+      <strong>✅ Challenge Passed! (+25 XP)</strong><br />
+      ${escapeHtml(weekObj.codeChallenge.simulatedOutput || "Code compiled cleanly without errors!")}
+    `;
+    launchConfetti();
+    if (!completedWeeks.includes(weekNum)) {
+      completedWeeks.push(weekNum);
+      saveCompletedWeeks();
+      renderSidebar();
+    }
+  } else {
+    fb.className = "feedback-box visible";
+    fb.style.background = "#ffe4e6";
+    fb.style.borderLeft = "4px solid #f43f5e";
+    fb.style.color = "#9f1239";
+    fb.innerHTML = `
+      <strong>❌ Compilation Error:</strong> Missing required syntax elements:<br />
+      ${missing.map(m => `<code>${escapeHtml(m)}</code>`).join(", ")}
+    `;
+  }
+};
+
+window.showChallengeSolution = function(weekNum) {
+  const weekObj = WEEKS_DATA.find(w => w.week === weekNum);
+  const editor = document.getElementById("challenge-editor");
+  if (editor && weekObj) {
+    editor.value = weekObj.codeChallenge.solutionCode;
+    verifyCodeChallenge(weekNum);
+  }
+};
+
+// Theme Management
+window.setTheme = function(themeName) {
+  document.documentElement.setAttribute("data-theme", themeName);
+  try { localStorage.setItem("ios_theme", themeName); } catch (e) {}
+};
+
+// App Initialization
+document.addEventListener("DOMContentLoaded", () => {
+  const savedTheme = localStorage.getItem("ios_theme") || "aurora";
+  document.documentElement.setAttribute("data-theme", savedTheme);
+  const themeSel = document.getElementById("theme-selector");
+  if (themeSel) themeSel.value = savedTheme;
+
+  renderSidebar();
+  renderMainContent();
+  updateProgressUI();
 });

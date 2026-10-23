@@ -13,17 +13,22 @@
 <body>
   <!-- Sticky Top Navigation -->
   <header class="topbar">
-    <a href="#" class="brand" onclick="selectWeek(1)">
-      <div class="brand-badges">
-        <span class="pill pill-kotlin">Kotlin</span>
-        <span>→</span>
-        <span class="pill pill-swift">Swift 6</span>
-      </div>
-      <span>Android to iOS Academy</span>
-    </a>
+    <div style="display:flex;align-items:center;gap:0.75rem;">
+      <button class="mobile-menu-btn" onclick="toggleSidebar()" aria-label="Toggle Navigation Menu">
+        <span></span><span></span><span></span>
+      </button>
+      <a href="#" class="brand" onclick="selectTab('roadmap')">
+        <div class="brand-badges">
+          <span class="pill pill-kotlin">Kotlin</span>
+          <span>→</span>
+          <span class="pill pill-swift">Swift 6</span>
+        </div>
+        <span>Android to iOS Academy</span>
+      </a>
+    </div>
 
     <div class="topbar-actions">
-      <div id="xp-badge" class="xp-pill" title="Earn XP by answering quiz questions and completing Swift labs!">
+      <div id="xp-badge" class="xp-pill" title="Earn XP by completing daily micro-steps, flashcards, and quizzes!">
         ⚡ <span id="xp-count">0</span> XP
       </div>
 
@@ -34,11 +39,11 @@
         </div>
       </div>
 
-      <button class="btn" onclick="selectTab('roadmap')" title="Open 10-Week Roadmap & Orientation">
-        🧭 Roadmap & Orientation
+      <button class="btn nav-tab-btn" id="nav-btn-roadmap" onclick="selectTab('roadmap')" title="Open 10-Week Roadmap & Orientation">
+        🧭 Roadmap
       </button>
 
-      <button class="btn" onclick="selectTab('rosetta')" title="Open Android to iOS Rosetta Stone">
+      <button class="btn nav-tab-btn" id="nav-btn-rosetta" onclick="selectTab('rosetta')" title="Open Android to iOS Rosetta Stone">
         🗺️ Rosetta Stone
       </button>
 
@@ -52,32 +57,64 @@
         href="https://github.com/sudhakar-r08/ios-for-android-devs"
         target="_blank"
         rel="noopener noreferrer"
-        class="btn btn-primary"
+        class="btn btn-primary github-star-btn"
       >
-        ⭐ GitHub Repo
+        ⭐ GitHub
       </a>
     </div>
   </header>
 
+  <div id="sidebar-backdrop" class="sidebar-backdrop" onclick="toggleSidebar()"></div>
+
   <!-- Main Application Shell -->
   <div class="app-shell">
-    <!-- Left Sidebar: 10-Week Curriculum -->
-    <aside class="sidebar" aria-label="10-Week Curriculum Navigation">
-      <div>
-        <div class="sidebar-section-title">10-Week Roadmap (Oct – Dec)</div>
-        <ul id="week-nav-list" class="week-nav-list"></ul>
+    <!-- Left Sidebar: 10-Week Academic Curriculum -->
+    <aside class="sidebar" id="sidebar" aria-label="Course Curriculum Navigation">
+      <!-- Search Bar -->
+      <div class="sidebar-search-container">
+        <div class="sidebar-search-box">
+          <span class="search-icon">🔍</span>
+          <input
+            type="text"
+            id="course-search-input"
+            class="course-search-input"
+            placeholder="Search lessons, Kotlin, Swift..."
+            oninput="handleCourseSearch(this.value)"
+            autocomplete="off"
+          />
+          <button id="clear-search-btn" class="clear-search-btn" onclick="clearCourseSearch()" title="Clear search">✕</button>
+        </div>
       </div>
 
-      <div style="margin-top:auto;padding:0.9rem;background:var(--bg-surface);border-radius:var(--radius-sm);border:1px solid var(--border-color);font-size:0.8rem;">
-        <div style="font-weight:700;margin-bottom:0.25rem;">👨‍💻 Created by Sudhakar Raju</div>
-        <p style="color:var(--text-secondary);margin-bottom:0.5rem;">
-          Learn iOS through Android mental models & publish weekly engineering insights.
+      <!-- Student Level & XP Card -->
+      <div class="student-level-card">
+        <div class="student-level-header">
+          <span class="student-level-badge" id="student-rank-badge">🌱 Android Scout</span>
+          <span class="student-level-xp" id="student-xp-display">0 XP</span>
+        </div>
+        <div class="student-subtext" id="student-completed-subtext">0 of 50 micro-steps completed</div>
+      </div>
+
+      <!-- Search Results Dropdown -->
+      <div id="search-results-list" class="search-results-list" style="display:none;"></div>
+
+      <!-- Curriculum Tree Grouped by Modules -->
+      <div class="curriculum-container">
+        <div class="sidebar-section-title">COURSE CURRICULUM</div>
+        <div id="curriculum-tree" class="curriculum-tree"></div>
+      </div>
+
+      <!-- Footer Info -->
+      <div class="sidebar-footer">
+        <div style="font-weight:700;margin-bottom:0.25rem;">👨‍💻 Sudhakar Raju</div>
+        <p style="color:var(--text-secondary);margin-bottom:0.45rem;font-size:0.78rem;">
+          Learn modern iOS through Android mental models.
         </p>
         <a
           href="https://github.com/sudhakar-r08"
           target="_blank"
           rel="noopener noreferrer"
-          style="color:var(--accent-blue);text-decoration:none;font-weight:600;"
+          style="color:var(--accent-primary);text-decoration:none;font-weight:700;font-size:0.78rem;"
         >
           @sudhakar-r08 on GitHub →
         </a>
