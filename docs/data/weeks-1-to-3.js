@@ -28,6 +28,21 @@ window.WEEKS_1_TO_3 = [
         time: "15 mins",
         goal: "Get comfortable declaring variables, string interpolation, and lists in Swift without typing Kotlin syntax by mistake.",
         shift: "Swift uses `let` instead of `val`, `\\(var)` instead of `$var`, and clean bracket literals `[1, 2]` for arrays.",
+        description: [
+          "In Swift, immutability is deeply integrated into the LLVM compiler rather than being a shallow reference flag. When you declare a value with `let`, the compiler guarantees that the storage cannot be reassigned or mutated in place. For value types (like Structs, Arrays, and Dictionaries), `let` freezes the entire memory tree deeply.",
+          "Unlike Kotlin, which relies on runtime helper functions like `listOf()` or `mapOf()`, Swift features native literal syntax for collections. Arrays use `[Element]` and dictionaries use `[Key: Value]`. Swift's type inference is aggressive: `let numbers = [1, 2, 3]` is automatically inferred as `Array<Int>` without runtime wrapper overhead."
+        ],
+        hint: "Xcode Shortcut: Press Cmd+Shift+O to quickly open any file or symbol by name (like Double-Shift in Android Studio). Also, type \\() inside any string to instantly trigger interpolation autocomplete.",
+        dos: [
+          "Use `let` by default for all variables; switch to `var` only when the compiler complains of mutation.",
+          "Use string interpolation `\"\\(variable)\"` for clean, readable text formatting.",
+          "Use bracket literals `[1, 2, 3]` for arrays and `[\"key\": \"value\"]` for dictionaries."
+        ],
+        donts: [
+          "Don't use Kotlin `$var` syntax in Swift strings; it will not compile.",
+          "Don't use `var` for constants that are never reassigned.",
+          "Don't use legacy `NSMutableArray` or `NSDictionary` from Objective-C."
+        ],
         details: [
           "<strong>`let` vs `val`:</strong> In Swift, `let` defines a constant. If you never reassign a variable, the compiler will gently warn you to change `var` to `let`.",
           "<strong>String Interpolation:</strong> Kotlin uses `\"Hi $name\"` or `\"Count: ${list.size}\"`. Swift uses `\"Hi \\(name)\"` or `\"Count: \\(list.count)\"`.",
@@ -56,6 +71,21 @@ print("First tag: \\(tags.first ?? \"none\")")`
         time: "15 mins",
         goal: "Master external vs. internal argument labels so you can read and write idiomatic Apple APIs.",
         shift: "Swift functions are deliberately designed to read like readable English sentences when called.",
+        description: [
+          "One of Swift's most distinctive language design pillars is its external vs. internal argument label system. In Swift, every parameter can have two names: an external label seen by the caller at the call site, and an internal parameter name used inside the function implementation body.",
+          "The design philosophy stems from Objective-C's Smalltalk-style messaging: Apple API design guidelines dictate that calling a function should read like a grammatical, fluent English clause. By providing external prepositions like 'to', 'from', 'for', and 'with', call sites become self-documenting without needing comment annotations."
+        ],
+        hint: "Design Rule: If your function name already includes a preposition (e.g. `insert(_:at:)`), use an underscore `_` for the first parameter to avoid stuttering like `insert(item: item, at: index)`.",
+        dos: [
+          "Design argument labels so call sites read like natural English sentences (`greet(to: \"Alex\")`).",
+          "Use an underscore `_` to suppress parameter labels only when the function name already makes the argument obvious.",
+          "Provide default values for parameters instead of writing redundant overloaded methods."
+        ],
+        donts: [
+          "Don't suppress all argument labels with `_` out of Android habit—you lose call-site clarity.",
+          "Don't name parameters `arg1`, `val`, or `param`; make them expressive and domain-driven.",
+          "Don't repeat the parameter type in the label (e.g. `sendString(string:)`)."
+        ],
         details: [
           "<strong>The Two-Name Rule:</strong> `func transfer(amount: Double, from source: Account, to destination: Account)`. At the call site, it reads naturally: `transfer(amount: 50, from: checking, to: savings)`.",
           "<strong>Omitting Labels with `_`:</strong> If a parameter label feels redundant, put `_` before the name: `func printMessage(_ text: String)` lets you call `printMessage(\"Hello\")` just like in Kotlin.",
@@ -88,6 +118,21 @@ print(square(5)) // No label needed!`
         time: "15 mins",
         goal: "Handle nullability in Swift using safe calls `?`, default values `??`, and early-exit `guard let`.",
         shift: "Kotlin uses `?:` (Elvis) for defaults; Swift uses `??`. Kotlin smart-casts after `!= null`; Swift uses `if let` or `guard let`.",
+        description: [
+          "In Swift, Optionals are not magic null pointers; they are actually an enum under the hood: `enum Optional<Wrapped> { case none, case some(Wrapped) }`. Because Swift is strongly typed with no ambient null pointer exceptions, the compiler forces you to explicitly unwrap optional values before accessing their properties.",
+          "While Kotlin relies heavily on smart-casting after `!= null` checks, Swift uses explicit binding constructs: `if let` and `guard let`. The `guard let` statement is Swift's crown jewel for the 'Golden Path' architecture: it requires an early exit (`return`, `throw`, `fatalError`) if the condition fails, keeping the unwrapped variable in scope for the entire remainder of the enclosing function!"
+        ],
+        hint: "Swift 5.7+ Shorthand: Instead of writing `if let user = user`, you can simply write `if let user { ... }` or `guard let user else { return }`. The Swift compiler infers the unwrap target automatically.",
+        dos: [
+          "Use `guard let ... else { return }` for early exits to keep your code indentation flat along the Golden Path.",
+          "Use `??` (nil-coalescing) to provide clean fallback values for optionals.",
+          "Use Swift 5.7+ shorthand syntax `if let user { ... }` when the variable name matches."
+        ],
+        donts: [
+          "Never use the force unwrap operator `!` in production code; it will crash if nil.",
+          "Don't nest multiple levels of `if let` statements (the dreaded pyramid of doom).",
+          "Don't write `if (val != nil) { val! }`—always unwrap safely with `if let` or `guard let`."
+        ],
         details: [
           "<strong>The Nil-Coalescing Operator (`??`):</strong> Swift's `name ?? \"Guest\"` is identical to Kotlin's Elvis operator `name ?: \"Guest\"`.",
           "<strong>`guard let` for Early Exit:</strong> Instead of nesting code inside deep `if` statements, Swift uses `guard let user = optionalUser else { return }`. The variable `user` stays valid for the entire rest of the function!",
@@ -130,6 +175,21 @@ func displayUser(name: String?, age: Int?) {
         time: "15 mins",
         goal: "Know when to create a `struct` vs a `class`, and how Swift enums replace Kotlin sealed classes.",
         shift: "Simple rule of thumb: Default to `struct` for data models and state; use `class` only when you need shared reference identity.",
+        description: [
+          "The fundamental architectural distinction between Kotlin and Swift lies in Value Types (`struct`) vs Reference Types (`class`). In Kotlin/JVM, almost every custom data model is a reference class allocated on the heap and tracked by the garbage collector.",
+          "In Swift, `struct` is a Value Type: instances are copied when assigned or passed into functions, live on the stack (unless escaping), and are never shared across threads. This completely eliminates data races for pure data models. Swift enums also go far beyond Kotlin enum classes: they can hold associated values per case, effectively serving as lightweight tagged unions (Kotlin sealed interfaces) with zero heap allocation overhead."
+        ],
+        hint: "Initializer Tip: Swift `struct` types automatically synthesize a memberwise initializer for free. If you define a custom `init` inside an `extension` (instead of the main body), you preserve the free memberwise initializer!",
+        dos: [
+          "Default to `struct` for all data models, state objects, and DTOs to get thread-safe value semantics.",
+          "Use `class` only when you genuinely require reference identity, Objective-C interoperability, or shared mutable lifecycle.",
+          "Use `enum` with associated values to represent mutually exclusive state machines."
+        ],
+        donts: [
+          "Don't make everything a `class` out of Java/Kotlin habit.",
+          "Don't build deep class inheritance hierarchies for domain data.",
+          "Don't mutate struct properties through reference aliases—structs are copied on assignment."
+        ],
         details: [
           "<strong>The Golden Rule:</strong> 90% of your models in Swift will be `struct` (lightweight, value-type). You use `class` mostly for long-lived stateful services or ViewModels.",
           "<strong>Automatic Initializers:</strong> A Swift `struct` gets a free memberwise initializer (`User(id: \"1\", name: \"Alex\")`) generated by the compiler—just like a Kotlin `data class`!",
@@ -163,6 +223,21 @@ let state: ScreenState = .success(user: User(id: "1", name: "Sudhakar"))`
         time: "20 mins",
         goal: "Put the 4 days of Swift basics into practice in Xcode or Swift Playgrounds, test your understanding with a friendly quiz, and publish your week's reflection on LinkedIn.",
         shift: "Reflect on how familiar Swift feels once you know the 3-4 small syntax differences.",
+        description: [
+          "Week 1 bridges the foundational syntax gap between Android and iOS. Now that you understand `let` vs `var`, external argument labels, optionals without null pointer exceptions, and value vs reference semantics, you have the foundational bedrock required for SwiftUI and modern iOS architecture.",
+          "In this lab, you synthesize these four concepts into a clean, idiomatic utility function and test your knowledge against the 10-question confidence quiz before stepping into Week 2's protocols and extensions."
+        ],
+        hint: "Xcode Shortcut: Use Xcode Playgrounds (File > New > Playground) for instant REPL execution when experimenting with Swift algorithms before integrating into an app target.",
+        dos: [
+          "Leverage compiler-enforced exhaustiveness in `switch` statements over enums.",
+          "Pattern-match associated values with `case .success(let data):`.",
+          "Test boundary conditions: empty collections, nil values, and extreme numbers."
+        ],
+        donts: [
+          "Don't add a lazy `default:` case when switching over a finite enum; let the compiler catch missing cases.",
+          "Don't ignore compiler warnings in Xcode; treat them as build errors.",
+          "Don't copy-paste raw Kotlin logic into Swift without adopting Swift value semantics."
+        ],
         details: [
           "<strong>Step 1:</strong> Run through the Week 1 coding challenge in the Practice tab.",
           "<strong>Step 2:</strong> Take the 5-question confidence check.",
@@ -503,6 +578,21 @@ guard let user = repo.getUser() else {
         time: "15 mins",
         goal: "Define protocols and provide shared default behavior using protocol extensions.",
         shift: "Kotlin interfaces have method bodies inside the interface; Swift protocols only declare requirements, and extensions provide default implementations.",
+        description: [
+          "In Swift, protocols are the cornerstone of the language's architectural paradigm: Protocol-Oriented Programming (POP). Unlike Java and Kotlin interfaces where default implementations are declared inline inside the interface body, Swift separates requirement declarations from implementation.",
+          "The protocol definition specifies only the blueprint (method signatures and read/write property requirements). Default behavior is supplied externally in an `extension ProtocolName { ... }`. Conforming types inherit the default implementation automatically, but can freely override it with a specialized implementation."
+        ],
+        hint: "Default Implementations: Unlike Java interfaces, Swift protocols can have default method implementations written in a separate `extension MyProtocol { ... }` without modifying the original protocol definition.",
+        dos: [
+          "Compose small, single-purpose protocols (`Identifiable`, `Equatable`, `Sendable`).",
+          "Provide default method implementations in protocol extensions to avoid boilerplate in conforming types.",
+          "Use protocol conformance to decouple business logic from concrete dependencies."
+        ],
+        donts: [
+          "Don't create giant monolithic god-protocols with 20 methods.",
+          "Don't use classes where a protocol with value type implementations is cleaner.",
+          "Don't use runtime type casting (`as?`) when polymorphism via protocols handles it naturally."
+        ],
         details: [
           "<strong>Protocol Declaration:</strong> `protocol Identifiable { var id: String { get } }`.",
           "<strong>Default Behavior:</strong> `extension Identifiable { func printId() { print(id) } }` provides the implementation to every conforming type."
@@ -528,6 +618,21 @@ extension Greetable {
         time: "15 mins",
         goal: "Add new methods and protocol conformances to existing types without subclassing.",
         shift: "In Kotlin, extension functions cannot make an existing class implement a new interface. In Swift, extensions CAN make any type conform to a protocol!",
+        description: [
+          "In Kotlin, extension functions are syntactic sugar that resolve statically: you can call `fun String.toSlug()`, but you cannot make `String` implement a new interface `SlugConvertible` retroactively.",
+          "In Swift, extensions have first-class type system superpowers called Retroactive Modeling. You can declare `extension String: Greetable { ... }` or `extension Int: Identifiable { ... }` in your own codebase, and the compiler treats that built-in type as an authentic conforming citizen anywhere in your module without modifying the original Apple source code."
+        ],
+        hint: "Code Organization: In iOS, senior developers use extensions to group protocol conformances: `extension UserProfileView: Equatable { ... }` keeping the main definition lean and readable.",
+        dos: [
+          "Use extensions to organize code into logical sections with `// MARK: -` headers.",
+          "Extend existing standard library types (`String`, `Date`) with domain-specific helpers.",
+          "Put protocol conformances into dedicated extension blocks in separate files."
+        ],
+        donts: [
+          "Don't scatter extensions randomly without consistent naming (`String+Formatting.swift`).",
+          "Don't attempt to add stored properties in extensions; only computed properties are supported.",
+          "Don't pollute global standard library types with overly specific one-off helpers."
+        ],
         details: [
           "<strong>Retroactive Conformance:</strong> `extension String: Greetable { var name: String { self } }`. Now `String` is officially `Greetable` across your app!"
         ],
@@ -543,9 +648,24 @@ extension String {
       {
         day: 3,
         title: "Opaque Types (`some`) vs Existential Boxes (`any`)",
-        shift: "Understanding why every SwiftUI view has `var body: some View`.",
         time: "15 mins",
         goal: "Demystify the `some` keyword in Swift for Jetpack Compose developers.",
+        shift: "Understanding why every SwiftUI view has `var body: some View`.",
+        description: [
+          "Jetpack Compose functions are annotated with `@Composable` and emit UI nodes directly into a Composer slot table without returning a type. In SwiftUI, every view is a `struct` that conforms to `View` and must implement `var body: some View`.",
+          "The `some` keyword introduces an Opaque Return Type. It tells the compiler: 'This property returns a specific concrete type conforming to View, but I don't want to expose the monstrously complex nested generic type `TupleView<(Text, Button<Text>)>`'. The compiler preserves static dispatch and memory layout optimizations without paying the dynamic dispatch and heap allocation penalties of `any View`."
+        ],
+        hint: "Performance Tip: Use `some View` (opaque return type) in SwiftUI instead of `any View` (existential box). `some` allows the compiler to resolve concrete types statically without heap allocation overhead.",
+        dos: [
+          "Use `some View` (opaque return type) for SwiftUI `body` properties to enable static compiler dispatch.",
+          "Use generic constraints (`<T: Repository>`) for high-performance static dispatch.",
+          "Use `any Protocol` (existential) only when you truly need heterogeneous collections at runtime."
+        ],
+        donts: [
+          "Don't wrap SwiftUI views in `AnyView`—it destroys SwiftUI's view identity and diffing performance.",
+          "Don't use `any Protocol` where `some Protocol` works; existential boxes add dynamic dispatch and heap costs.",
+          "Don't expose internal concrete view types in public component APIs."
+        ],
         details: [
           "<strong>`some View`:</strong> Promises the compiler that this function will always return ONE consistent concrete type, enabling compile-time static optimization without heap boxing.",
           "<strong>`any View`:</strong> A runtime box that can hold any view dynamically (slower, used only when dynamic switching is strictly required)."
@@ -568,6 +688,21 @@ struct Header: View {
         time: "15 mins",
         goal: "Handle errors reliably without unexpected runtime crashes.",
         shift: "Kotlin uses unchecked exceptions or `runCatching`. Swift enforces explicit `try` at every call site that can throw.",
+        description: [
+          "Kotlin and Java rely on unchecked exceptions or wrappers like `runCatching { ... }`. In Swift, errors are strictly checked, and error propagation is explicit. Any function that can fail must be marked with `throws`, and every single invocation must be marked with `try`.",
+          "Swift provides three flavors of `try`: `try` (used inside `do-catch` blocks to inspect typed errors), `try?` (which converts the result into an optional, returning `nil` if an error was thrown), and `try!` (force try, which crashes if an error occurs). `try?` is particularly idiomatic for lightweight conversions and parsing."
+        ],
+        hint: "Error Handling: Use `try?` to convert a throwing expression into an optional (`nil` if thrown). It is perfect for one-liners like `let cachedData = try? Data(contentsOf: url)`.",
+        dos: [
+          "Model domain errors with typed Swift enums conforming to `Error`.",
+          "Use `do-catch` blocks at clear architectural boundaries (e.g. in ViewModels or UseCases).",
+          "Use `try?` when a nil result is a completely acceptable fallback."
+        ],
+        donts: [
+          "Never catch generic errors and silently swallow them with empty `catch {}` blocks.",
+          "Don't use exceptions for normal control flow (like loop termination).",
+          "Don't use `try!` unless you are writing a unit test that is guaranteed to succeed."
+        ],
         details: [
           "<strong>`try?`:</strong> Turns any thrown error into `nil`, returning an Optional. Great for non-critical operations like parsing an int from a string.",
           "<strong>`do / catch`:</strong> Used when you need to inspect and handle specific errors."
@@ -587,6 +722,21 @@ let age = try? parseAge("25")`
         time: "20 mins",
         goal: "Solidify protocol-oriented programming, test your knowledge, and publish Week 2 on LinkedIn.",
         shift: "Recognize how Protocol-Oriented Programming replaces deep class hierarchies with clean composition.",
+        description: [
+          "Week 2 cements the bridge from Object-Oriented inheritance to Swift's Protocol-Oriented paradigm. In Android, developers often rely on abstract base classes (`BaseActivity`, `BaseViewModel`). In iOS, protocol composition and extensions replace inheritance with clean, testable modular contracts.",
+          "By leveraging protocols with associated types and retroactive extensions, your architecture remains decoupled and easily mockable for unit testing without relying on heavy external runtime reflection frameworks."
+        ],
+        hint: "Typealias Composition: You can compose multiple protocols together cleanly using `typealias`: `typealias JSONModel = Codable & Identifiable & Sendable`.",
+        dos: [
+          "Test both success and error paths in your protocol-oriented code.",
+          "Use protocol mocking to verify error handling without hitting real networks or databases.",
+          "Document custom errors with clear, localized descriptions."
+        ],
+        donts: [
+          "Don't create complex mock classes with hand-rolled state when a simple stub protocol suffices.",
+          "Don't skip error mapping between raw network HTTP errors and user-facing domain errors.",
+          "Don't leave unfinished error handling TODOs in shipping code."
+        ],
         details: [
           "Complete the Week 2 practice challenge, take the quiz, and copy the weekly LinkedIn reflection."
         ],
@@ -820,6 +970,21 @@ In Kotlin, we use \`interface\` and inheritance. In Swift, Apple emphasizes **Pr
         time: "15 mins",
         goal: "Build your first SwiftUI view and see it render live in the Xcode Preview Canvas.",
         shift: "Compose views are functions emitted into a Slot Table; SwiftUI views are lightweight structs conforming to `View`.",
+        description: [
+          "In Jetpack Compose, UI components are `@Composable` functions that emit layout nodes into an internal runtime slot table. Recomposition re-runs the function when state changes.",
+          "In SwiftUI, UI components are value-type `struct`s conforming to the `View` protocol. When state changes, SwiftUI calls the computed `var body: some View` property to obtain a new view hierarchy tree. Because View structs are stack-allocated, creating and diffing them is virtually zero-cost—SwiftUI discards the struct and only updates the underlying render layer for differences."
+        ],
+        hint: "Canvas Shortcut: Press Option+Cmd+Enter in Xcode to instantly toggle the interactive Canvas Preview pane. Press Option+Cmd+P to force a preview refresh when it pauses.",
+        dos: [
+          "Treat SwiftUI `View` structs as lightweight, immutable blueprints that are recreated frequently.",
+          "Break large screens into small, modular subviews with focused single responsibilities.",
+          "Provide representative mock data in Xcode Previews to test multiple states (loading, empty, loaded)."
+        ],
+        donts: [
+          "Don't write 400-line monolithic `body` properties—extract subviews or computed properties.",
+          "Don't store heavy reference objects directly in `View` properties without `@State` or `@Observable`.",
+          "Don't perform network or database operations directly inside the `body` property."
+        ],
         details: [
           "<strong>Lightweight Structs:</strong> Creating a SwiftUI View struct costs virtually nothing; it is just a declarative description of UI.",
           "<strong>`#Preview`:</strong> Use the modern `#Preview` macro to see instant interactive previews in the Xcode Canvas (like `@Preview` in Compose)."
@@ -848,6 +1013,21 @@ fun WelcomePreview() { WelcomeCard() }`,
         time: "15 mins",
         goal: "Arrange elements vertically, horizontally, and layered on top of each other.",
         shift: "`Column` ➔ `VStack`, `Row` ➔ `HStack`, and `Box` ➔ `ZStack`.",
+        description: [
+          "Layout in SwiftUI is built on three core stacking containers: `VStack` (vertical column), `HStack` (horizontal row), and `ZStack` (back-to-front depth layering).",
+          "Unlike Android Compose's `Column` and `Row` which default to zero gap, SwiftUI stacks come with system-adaptive default spacing (typically 8pt on iPhone) and center alignment. When you require pixel-perfect layouts, explicitly specify `alignment:` and `spacing:` on the stack container rather than scattering padding modifiers on individual children."
+        ],
+        hint: "Stack Spacing: Stacks have default spacing on iOS (usually 8pt). Always write `VStack(alignment: .leading, spacing: 16)` if you want predictable, pixel-perfect spacing between elements.",
+        dos: [
+          "Use `VStack`, `HStack`, and `ZStack` as structural layout containers.",
+          "Specify explicit alignment and spacing on stacks for consistent layouts across devices.",
+          "Nest stacks cleanly to achieve responsive, adaptive UI cards."
+        ],
+        donts: [
+          "Don't manually apply individual `.padding()` modifiers to every element when stack spacing works globally.",
+          "Don't use `ZStack` for simple overlays that can be handled with `.overlay()` or `.background()`.",
+          "Don't forget to test layouts with accessibility Large Text sizes enabled."
+        ],
         details: [
           "<strong>Spacing & Alignment:</strong> `VStack(alignment: .leading, spacing: 12) { ... }` configures child alignment and gap spacing cleanly.",
           "<strong>Layering with `ZStack`:</strong> `ZStack` layers child views back-to-front along the depth axis."
@@ -870,6 +1050,21 @@ fun WelcomePreview() { WelcomeCard() }`,
         time: "15 mins",
         goal: "Understand why modifier order matters just as much in SwiftUI as it does in Compose.",
         shift: "Each modifier wraps the previous view in a new modified view struct.",
+        description: [
+          "In Compose, `Modifier.padding(16.dp).background(Color.Blue)` applies chained operations to a single layout node. In SwiftUI, modifiers do not mutate the view; each modifier wraps the preceding view inside a brand-new container view struct.",
+          "Because each modifier wraps the previous view like an onion layer, the execution order is strictly sequential: `.padding(16).background(.blue)` expands the layout boundaries first and then paints the background over that expanded area. Conversely, `.background(.blue).padding(16)` paints the tight intrinsic bounds of the text first, and then adds 16pt of transparent margin outside of the colored box!"
+        ],
+        hint: "Modifier Wrapping Rule: In SwiftUI, modifiers wrap views like an onion from inside out. `.padding().background(Color.blue)` colors the padded view, whereas `.background(Color.blue).padding()` colors only the tight text boundaries!",
+        dos: [
+          "Remember that modifier order in SwiftUI is strictly sequential: inner modifiers apply first.",
+          "Apply `.padding()` before `.background()` if you want the background to enclose the padded area.",
+          "Use `@ViewBuilder` to conditionally include views instead of wrapping everything in `AnyView`."
+        ],
+        donts: [
+          "Don't assume modifiers behave like Android XML layout attributes; order matters fundamentally.",
+          "Don't use `AnyView` to resolve differing return types in conditional logic.",
+          "Don't chain 15 modifiers in an unorganized sequence; group layout, styling, and interactions."
+        ],
         details: [
           "Chaining `.padding(16).background(.blue)` expands the box by 16pt first, then paints the entire box blue.",
           "Chaining `.background(.blue).padding(16)` paints the tight text bounds blue first, then adds 16pt of transparent space around it!"
@@ -891,6 +1086,21 @@ fun WelcomePreview() { WelcomeCard() }`,
         time: "15 mins",
         goal: "Make views fill screen width and push siblings apart naturally.",
         shift: "`Modifier.weight(1f)` ➔ `Spacer()`, `Modifier.fillMaxWidth()` ➔ `.frame(maxWidth: .infinity)`.",
+        description: [
+          "In Jetpack Compose, you frequently use `Modifier.weight(1f)` inside a `Row` or `Modifier.fillMaxWidth()` to stretch elements across screen dimensions. SwiftUI takes a more declarative, spring-based approach to layout.",
+          "`Spacer()` is a flexible view that expands greedily along the primary axis of its parent stack (horizontally in an `HStack`, vertically in a `VStack`). To make an element span the entire available width regardless of screen size, use `.frame(maxWidth: .infinity, alignment: .leading)`—this tells the parent layout container that this view can stretch up to infinity while keeping its content aligned to the leading edge."
+        ],
+        hint: "Flexible Push: Use `Spacer(minLength: 0)` inside stacks to push items to opposite edges. Combine with `.frame(maxWidth: .infinity, alignment: .leading)` to build full-width cards.",
+        dos: [
+          "Use `Spacer(minLength: 0)` to push elements to screen edges naturally.",
+          "Use `.frame(maxWidth: .infinity, alignment: .leading)` for full-width components.",
+          "Let SwiftUI's adaptive layout system size views dynamically rather than hardcoding constants."
+        ],
+        donts: [
+          "Don't hardcode fixed pixel widths like `.frame(width: 375)`—it will break on iPhone SE and iPad.",
+          "Don't use negative padding as a hack for alignment issues.",
+          "Don't mix conflicting frame constraints that cause layout constraint warnings in the console."
+        ],
         details: [
           "Dropping a `Spacer()` inside an `HStack` expands greedily along the horizontal axis, pushing surrounding items to the edges.",
           "Use `.frame(maxWidth: .infinity, alignment: .leading)` to let cards expand across the entire screen width."
@@ -913,6 +1123,21 @@ fun WelcomePreview() { WelcomeCard() }`,
         time: "25 mins",
         goal: "Combine Stacks, Modifiers, Text, and Images to build a polished, production-ready Profile Card screen.",
         shift: "Experience the joy of instant visual feedback in the Xcode Canvas Preview.",
+        description: [
+          "Building your first complete screen in SwiftUI brings all fundamental layout building blocks together: Stacks, Modifiers, Text hierarchy, and Apple's SF Symbols vector system.",
+          "Notice how clean the declarative tree is compared to Android XML layouts or deeply nested Compose Card implementations. With Dynamic Type support and semantic styling, your iOS UI automatically adapts to dark mode, large accessibility fonts, and different device screen factors out of the box."
+        ],
+        hint: "SF Symbols: Apple includes over 5,000 native vector icons via `Image(systemName: \"star.fill\")`. They scale automatically with Dynamic Type and support hierarchical color rendering.",
+        dos: [
+          "Use Apple's SF Symbols for clean, vector-based, accessible icons.",
+          "Support Dynamic Type by using system font styles (`.headline`, `.subheadline`, `.caption`).",
+          "Test your components in both Light and Dark modes in Xcode Previews."
+        ],
+        donts: [
+          "Don't hardcode fixed font point sizes with `.font(.system(size: 16))` that ignore accessibility settings.",
+          "Don't hardcode raw hex colors; use semantic asset catalog colors (`Color(\"PrimaryAccent\")`).",
+          "Don't forget to add `.accessibilityLabel()` when icons alone convey critical actions."
+        ],
         details: [
           "Assemble an avatar image, name, role badge, bio text, and action button.",
           "Test your understanding with the quiz and share your first iOS screen on LinkedIn!"
@@ -928,12 +1153,34 @@ fun ProfileCard() {
 struct ProfileCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Sudhakar Raju").font(.title2).bold()
-            Text("Android Dev learning iOS").foregroundStyle(.secondary)
+            HStack(spacing: 12) {
+                Image(systemName: "person.crop.circle.fill")
+                    .resizable()
+                    .frame(width: 50, height: 50)
+                    .foregroundStyle(.blue)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Sudhakar Raju")
+                        .font(.headline)
+                    Text("Android & iOS Developer")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Text("Learning modern iOS with Swift 6 and SwiftUI before the New Year!")
+                .font(.body)
+                .padding(.top, 4)
+            Button(action: {}) {
+                Text("View GitHub Profile")
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+            }
+            .buttonStyle(.borderedProminent)
+            .padding(.top, 8)
         }
-        .padding(20)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .padding(16)
+        .background(Color(.systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
         .padding()
     }
 }`

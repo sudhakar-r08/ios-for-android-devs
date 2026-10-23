@@ -244,6 +244,439 @@ function getCheckpointForDay(weekNum, dayNum, step) {
   };
 }
 
+// ============================================================================
+// SENIOR ENGINEER HINTS & PRO-TIPS BY WEEK & DAY
+// ============================================================================
+const TOPIC_HINTS = {
+  // Week 1: Swift Basics
+  "1_1": "Xcode Shortcut: Press Cmd+Shift+O to quickly open any file or symbol by name (like Double-Shift in Android Studio). Also, type \\() inside any string to instantly trigger interpolation autocomplete.",
+  "1_2": "Design Rule: If your function name already includes a preposition (e.g. `insert(_:at:)`), use an underscore `_` for the first parameter to avoid stuttering like `insert(item: item, at: index)`.",
+  "1_3": "Swift 5.7+ Shorthand: Instead of writing `if let user = user`, you can simply write `if let user { ... }` or `guard let user else { return }`. The Swift compiler infers the unwrap target automatically.",
+  "1_4": "Initializer Tip: Swift `struct` types automatically synthesize a memberwise initializer for free. If you define a custom `init` inside an `extension` (instead of the main body), you preserve the free memberwise initializer!",
+  "1_5": "Exhaustive Switch: In Swift, `switch` on enums does not require a `break` keyword at the end of each case. It does not fall through unless you explicitly write `fallthrough`.",
+
+  // Week 2: Protocols & Extensions
+  "2_1": "Default Implementations: Unlike Java interfaces, Swift protocols can have default method implementations written in a separate `extension MyProtocol { ... }` without modifying the original protocol definition.",
+  "2_2": "Code Organization: In iOS, senior developers use extensions to group protocol conformances: `extension UserProfileView: Equatable { ... }` keeping the main definition lean and readable.",
+  "2_3": "Performance Tip: Use `some View` (opaque return type) in SwiftUI instead of `any View` (existential box). `some` allows the compiler to resolve concrete types statically without heap allocation overhead.",
+  "2_4": "Error Handling: Use `try?` to convert a throwing expression into an optional (`nil` if thrown). It is perfect for one-liners like `let cachedData = try? Data(contentsOf: url)`.",
+  "2_5": "Typealias Composition: You can compose multiple protocols together cleanly using `typealias`: `typealias JSONModel = Codable & Identifiable & Sendable`.",
+
+  // Week 3: SwiftUI Foundations
+  "3_1": "Canvas Shortcut: Press Option+Cmd+Enter in Xcode to instantly toggle the interactive Canvas Preview pane. Press Option+Cmd+P to force a preview refresh when it pauses.",
+  "3_2": "Stack Spacing: Stacks have default spacing on iOS (usually 8pt). Always write `VStack(alignment: .leading, spacing: 16)` if you want predictable, pixel-perfect spacing between elements.",
+  "3_3": "Modifier Wrapping Rule: In SwiftUI, modifiers wrap views like an onion from inside out. `.padding().background(Color.blue)` colors the padded view, whereas `.background(Color.blue).padding()` colors only the tight text boundaries!",
+  "3_4": "Flexible Push: Use `Spacer(minLength: 0)` inside stacks to push items to opposite edges. Combine with `.frame(maxWidth: .infinity, alignment: .leading)` to build full-width cards.",
+  "3_5": "SF Symbols: Apple includes over 5,000 native vector icons via `Image(systemName: \"star.fill\")`. They scale automatically with Dynamic Type and support hierarchical color rendering.",
+
+  // Week 4: State Management
+  "4_1": "State Encapsulation: Always mark `@State` properties as `private`. State belongs strictly to the view that created it; child views should receive values or `@Binding` projections.",
+  "4_2": "Two-Way Binding: The `$` prefix accesses the projected `Binding<T>`. Passing `$text` into a `TextField` allows the child component to mutate the parent state without callback boilerplate.",
+  "4_3": "Observation Granularity: With iOS 17's `@Observable` macro, SwiftUI only invalidates and redraws views that actually read the specific mutated property—no more unnecessary parent redraws!",
+  "4_4": "Environment Access: Inject dependencies at the root with `.environment(appState)` and retrieve them in any descendant with `@Environment(AppState.self) private var appState`.",
+  "4_5": "State Architecture: Keep business logic out of SwiftUI view bodies. Mutate `@Observable` ViewModel state only inside user-triggered actions (buttons, toggles) or `.task` lifecycle modifiers.",
+
+  // Week 5: Concurrency & Actors
+  "5_1": "Cooperative Pool: Swift Concurrency runs on a fixed cooperative thread pool sized to your device's CPU cores. It never spawns unbounded threads like Android's legacy `Dispatchers.IO`.",
+  "5_2": "Automatic Cancellation: SwiftUI's `.task` modifier automatically launches an async task when the view appears and cancels it cooperatively when the view is removed from the hierarchy.",
+  "5_3": "Concurrent Fan-Out: Use `async let (user, posts) = (fetchUser(), fetchPosts())` to run multiple network calls in parallel before awaiting them together.",
+  "5_4": "Main Thread Guarantee: Annotate your ViewModel classes with `@MainActor`. The compiler will ensure all published property changes and UI updates happen on the main thread automatically.",
+  "5_5": "Swift 6 Data Races: In Swift 6, data races are compile-time errors. Ensure any model sent across concurrency boundaries conforms to `Sendable` (value types do this automatically).",
+
+  // Week 6: Navigation & Lifecycle
+  "6_1": "Identifiable Protocol: Conforming your data model to `Identifiable` (with `id = UUID()`) eliminates the need for `id: \\.id` when using `List` or `ForEach`.",
+  "6_2": "Type-Safe Navigation: Use `NavigationStack(path: $path)` bound to an array of enum destinations. This allows programmatic pop-to-root (`path.removeAll()`) and deep-linking.",
+  "6_3": "Data-Driven Sheets: Always prefer `.sheet(item: $selectedUser)` over `.sheet(isPresented: $showSheet)`. It guarantees non-nil data is passed to the destination modal.",
+  "6_4": "Scene Phase: Observe `@Environment(\\.scenePhase) private var scenePhase` to detect when your app moves to `.active`, `.inactive`, or `.background`.",
+  "6_5": "Component Previews: Keep child views decoupled from global navigation routers so they can be previewed independently in Xcode Previews with mock data.",
+
+  // Week 7: Networking & Clean DI
+  "7_1": "URLSession async: `let (data, response) = try await URLSession.shared.data(from: url)` replaces entire OkHttp/Retrofit call stacks in standard iOS apps.",
+  "7_2": "Snake Case Decoding: Set `decoder.keyDecodingStrategy = .convertFromSnakeCase` on `JSONDecoder` to automatically map backend `user_name` to Swift `userName` without custom CodingKeys.",
+  "7_3": "HTTP Status Check: Always cast the URLResponse: `guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else { throw APIError.badStatus }`.",
+  "7_4": "Dependency Injection: In iOS, protocol initializer injection (`init(api: APIClient = LiveAPIClient())`) provides clean testability without requiring Hilt or Dagger reflection.",
+  "7_5": "Mock Fixtures: Load mock JSON files from your test bundle with `Bundle(for: Self.self).url(forResource: \"user\", withExtension: \"json\")` for deterministic offline testing.",
+
+  // Week 8: SwiftData & Security
+  "8_1": "AppStorage Simplicity: `@AppStorage(\"hasOnboarded\") var hasOnboarded = false` automatically stores values in `UserDefaults` and updates the view when changed.",
+  "8_2": "SwiftData @Model: The `@Model` macro in SwiftData replaces Room entity annotations, SQLite queries, and DAOs with a single, clean class declaration.",
+  "8_3": "Live Queries: The `@Query(sort: \\Item.date, order: .reverse) private var items: [Item]` macro automatically keeps SwiftUI views in sync with database insertions and deletions.",
+  "8_4": "Keychain Security: Never store auth tokens, API secrets, or passwords in `UserDefaults` or unencrypted SQLite files; always store them in the iOS Keychain.",
+  "8_5": "In-Memory Previews: Configure an in-memory `ModelContainer` for SwiftUI Previews so test data resets on every canvas re-render without touching disk.",
+
+  // Week 9: Memory & Testing
+  "9_1": "ARC vs GC: ARC is deterministic: when retain count drops to 0, `deinit` executes immediately. There is no garbage collector thread and no UI frame stutter.",
+  "9_2": "Retain Cycle Fix: In escaping closures that capture `self` (such as async handlers or completion callbacks), write `[weak self]` in the capture list to prevent leaks.",
+  "9_3": "Copy-on-Write: Swift value types (Array, Dictionary, String) share memory until you mutate one of them. Passing large collections around is practically zero-cost.",
+  "9_4": "Swift Testing: Use `@Test` and `#expect(user.isValid)` from Apple's modern `Testing` framework instead of legacy `XCTAssertEqual` from `XCTest`.",
+  "9_5": "Memory Graph: Click the Debug Memory Graph button in Xcode's debug bar to see an interactive 3D visual graph of all allocated objects and leaked retain cycles.",
+
+  // Week 10: Capstone & Shipping
+  "10_1": "Local SPM Packages: Modularize your app into local Swift packages using File > Add Package Dependencies > Add Local... to speed up incremental builds.",
+  "10_2": "Build Configuration: Use `.xcconfig` files to separate debug vs. production API endpoints, bundle identifiers, and app names without editing project pbxproj files.",
+  "10_3": "Signing & Provisioning: Enable 'Automatically manage signing' in Xcode target settings. Xcode will handle provisioning profiles and certificate requests automatically.",
+  "10_4": "TestFlight Distribute: In Xcode, select Product > Archive, then open the Organizer window and click 'Distribute App' to ship builds to TestFlight in one click.",
+  "10_5": "App Icon Asset: iOS 17+ requires only a single 1024x1024 PNG in `Assets.xcassets/AppIcon`. Xcode automatically generates all necessary device sizes on compilation."
+};
+
+// ============================================================================
+// BEST PRACTICES: DO'S AND DON'TS BY WEEK & DAY
+// ============================================================================
+const TOPIC_DOS_DONTS = {
+  // Week 1
+  "1_1": {
+    dos: [
+      "Use `let` by default for all variables; switch to `var` only when the compiler complains of mutation.",
+      "Use string interpolation `\"\\(variable)\"` for clean, readable text formatting.",
+      "Use bracket literals `[1, 2, 3]` for arrays and `[\"key\": \"value\"]` for dictionaries."
+    ],
+    donts: [
+      "Don't use Kotlin `$var` syntax in Swift strings; it will not compile.",
+      "Don't use `var` for constants that are never reassigned.",
+      "Don't use legacy `NSMutableArray` or `NSDictionary` from Objective-C."
+    ]
+  },
+  "1_2": {
+    dos: [
+      "Design argument labels so call sites read like natural English sentences (`greet(to: \"Alex\")`).",
+      "Use an underscore `_` to suppress parameter labels only when the function name already makes the argument obvious.",
+      "Provide default values for parameters instead of writing redundant overloaded methods."
+    ],
+    donts: [
+      "Don't suppress all argument labels with `_` out of Android habit—you lose call-site clarity.",
+      "Don't name parameters `arg1`, `val`, or `param`; make them expressive and domain-driven.",
+      "Don't repeat the parameter type in the label (e.g. `sendString(string:)`)."
+    ]
+  },
+  "1_3": {
+    dos: [
+      "Use `guard let ... else { return }` for early exits to keep your code indentation flat along the Golden Path.",
+      "Use `??` (nil-coalescing) to provide clean fallback values for optionals.",
+      "Use Swift 5.7+ shorthand syntax `if let user { ... }` when the variable name matches."
+    ],
+    donts: [
+      "Never use the force unwrap operator `!` in production code; it will crash if nil.",
+      "Don't nest multiple levels of `if let` statements (the dreaded pyramid of doom).",
+      "Don't write `if (val != nil) { val! }`—always unwrap safely with `if let` or `guard let`."
+    ]
+  },
+  "1_4": {
+    dos: [
+      "Default to `struct` for all data models, state objects, and DTOs to get thread-safe value semantics.",
+      "Use `class` only when you genuinely require reference identity, Objective-C interoperability, or shared mutable lifecycle.",
+      "Use `enum` with associated values to represent mutually exclusive state machines."
+    ],
+    donts: [
+      "Don't make everything a `class` out of Java/Kotlin habit.",
+      "Don't build deep class inheritance hierarchies for domain data.",
+      "Don't mutate struct properties through reference aliases—structs are copied on assignment."
+    ]
+  },
+  "1_5": {
+    dos: [
+      "Leverage compiler-enforced exhaustiveness in `switch` statements over enums.",
+      "Pattern-match associated values with `case .success(let data):`.",
+      "Test boundary conditions: empty collections, nil values, and extreme numbers."
+    ],
+    donts: [
+      "Don't add a lazy `default:` case when switching over a finite enum; let the compiler catch missing cases.",
+      "Don't ignore compiler warnings in Xcode; treat them as build errors.",
+      "Don't copy-paste raw Kotlin logic into Swift without adopting Swift value semantics."
+    ]
+  },
+
+  // Week 2: Protocols & Extensions
+  "2_1": {
+    dos: [
+      "Compose small, single-purpose protocols (`Identifiable`, `Equatable`, `Sendable`).",
+      "Provide default method implementations in protocol extensions to avoid boilerplate in conforming types.",
+      "Use protocol conformance to decouple business logic from concrete dependencies."
+    ],
+    donts: [
+      "Don't create giant monolithic god-protocols with 20 methods.",
+      "Don't use classes where a protocol with value type implementations is cleaner.",
+      "Don't use runtime type casting (`as?`) when polymorphism via protocols handles it naturally."
+    ]
+  },
+  "2_2": {
+    dos: [
+      "Use extensions to organize code into logical sections with `// MARK: -` headers.",
+      "Extend existing standard library types (`String`, `Date`) with domain-specific helpers.",
+      "Put protocol conformances into dedicated extension blocks in separate files."
+    ],
+    donts: [
+      "Don't scatter extensions randomly without consistent naming (`String+Formatting.swift`).",
+      "Don't attempt to add stored properties in extensions; only computed properties are supported.",
+      "Don't pollute global standard library types with overly specific one-off helpers."
+    ]
+  },
+  "2_3": {
+    dos: [
+      "Use `some View` (opaque return type) for SwiftUI `body` properties to enable static compiler dispatch.",
+      "Use generic constraints (`<T: Repository>`) for high-performance static dispatch.",
+      "Use `any Protocol` (existential) only when you truly need heterogeneous collections at runtime."
+    ],
+    donts: [
+      "Don't wrap SwiftUI views in `AnyView`—it destroys SwiftUI's view identity and diffing performance.",
+      "Don't use `any Protocol` where `some Protocol` works; existential boxes add dynamic dispatch and heap costs.",
+      "Don't expose internal concrete view types in public component APIs."
+    ]
+  },
+  "2_4": {
+    dos: [
+      "Model domain errors with typed Swift enums conforming to `Error`.",
+      "Use `do-catch` blocks at clear architectural boundaries (e.g. in ViewModels or UseCases).",
+      "Use `try?` when a nil result is a completely acceptable fallback."
+    ],
+    donts: [
+      "Never catch generic errors and silently swallow them with empty `catch {}` blocks.",
+      "Don't use exceptions for normal control flow (like loop termination).",
+      "Don't use `try!` unless you are writing a unit test that is guaranteed to succeed."
+    ]
+  },
+  "2_5": {
+    dos: [
+      "Test both success and error paths in your protocol-oriented code.",
+      "Use protocol mocking to verify error handling without hitting real networks or databases.",
+      "Document custom errors with clear, localized descriptions."
+    ],
+    donts: [
+      "Don't create complex mock classes with hand-rolled state when a simple stub protocol suffices.",
+      "Don't skip error mapping between raw network HTTP errors and user-facing domain errors.",
+      "Don't leave unfinished error handling TODOs in shipping code."
+    ]
+  },
+
+  // Week 3: SwiftUI Foundations
+  "3_1": {
+    dos: [
+      "Treat SwiftUI `View` structs as lightweight, immutable blueprints that are recreated frequently.",
+      "Break large screens into small, modular subviews with focused single responsibilities.",
+      "Provide representative mock data in Xcode Previews to test multiple states (loading, empty, loaded)."
+    ],
+    donts: [
+      "Don't write 400-line monolithic `body` properties—extract subviews or computed properties.",
+      "Don't store heavy reference objects directly in `View` properties without `@State` or `@Observable`.",
+      "Don't perform network or database operations directly inside the `body` property."
+    ]
+  },
+  "3_2": {
+    dos: [
+      "Use `VStack`, `HStack`, and `ZStack` as structural layout containers.",
+      "Specify explicit alignment and spacing on stacks for consistent layouts across devices.",
+      "Nest stacks cleanly to achieve responsive, adaptive UI cards."
+    ],
+    donts: [
+      "Don't manually apply individual `.padding()` modifiers to every element when stack spacing works globally.",
+      "Don't use `ZStack` for simple overlays that can be handled with `.overlay()` or `.background()`.",
+      "Don't forget to test layouts with accessibility Large Text sizes enabled."
+    ]
+  },
+  "3_3": {
+    dos: [
+      "Remember that modifier order in SwiftUI is strictly sequential: inner modifiers apply first.",
+      "Apply `.padding()` before `.background()` if you want the background to enclose the padded area.",
+      "Use `@ViewBuilder` to conditionally include views instead of wrapping everything in `AnyView`."
+    ],
+    donts: [
+      "Don't assume modifiers behave like Android XML layout attributes; order matters fundamentally.",
+      "Don't use `AnyView` to resolve differing return types in conditional logic.",
+      "Don't chain 15 modifiers in an unorganized sequence; group layout, styling, and interactions."
+    ]
+  },
+  "3_4": {
+    dos: [
+      "Use `Spacer(minLength: 0)` to push elements to screen edges naturally.",
+      "Use `.frame(maxWidth: .infinity, alignment: .leading)` for full-width components.",
+      "Let SwiftUI's adaptive layout system size views dynamically rather than hardcoding constants."
+    ],
+    donts: [
+      "Don't hardcode fixed pixel widths like `.frame(width: 375)`—it will break on iPhone SE and iPad.",
+      "Don't use negative padding as a hack for alignment issues.",
+      "Don't mix conflicting frame constraints that cause layout constraint warnings in the console."
+    ]
+  },
+  "3_5": {
+    dos: [
+      "Use Apple's SF Symbols for clean, vector-based, accessible icons.",
+      "Support Dynamic Type by using system font styles (`.headline`, `.subheadline`, `.caption`).",
+      "Test your components in both Light and Dark modes in Xcode Previews."
+    ],
+    donts: [
+      "Don't hardcode fixed font point sizes with `.font(.system(size: 16))` that ignore accessibility settings.",
+      "Don't hardcode raw hex colors; use semantic asset catalog colors (`Color(\"PrimaryAccent\")`).",
+      "Don't forget to add `.accessibilityLabel()` when icons alone convey critical actions."
+    ]
+  }
+};
+
+function getDefaultHintForStep(weekNum, dayNum, step) {
+  const key = `${weekNum}_${dayNum}`;
+  if (TOPIC_HINTS[key]) return TOPIC_HINTS[key];
+  switch (weekNum) {
+    case 4:
+      return "State Hint: With iOS 17's `@Observable` macro, avoid legacy `ObservableObject`. Mark your ViewModel with `@Observable` and SwiftUI will automatically track only the specific fields read in the view body.";
+    case 5:
+      return "Concurrency Hint: Use the `.task` modifier on views for async fetching—it automatically attaches to the view's lifecycle and cancels the task when the view unmounts.";
+    case 6:
+      return "Navigation Hint: Use `NavigationStack(path: $path)` with an array of type-safe destinations. This enables programmatic deep-linking and easy pop-to-root (`path.removeAll()`).";
+    case 7:
+      return "Networking Hint: Set `decoder.keyDecodingStrategy = .convertFromSnakeCase` on `JSONDecoder` to automatically convert snake_case JSON keys to Swift camelCase without custom `CodingKeys`.";
+    case 8:
+      return "Persistence Hint: Use `@AppStorage` for lightweight user preferences and SwiftData's `@Model` for rich entity persistence. Keep sensitive tokens in the iOS Keychain.";
+    case 9:
+      return "Memory Hint: ARC operates deterministically: when retain count hits zero, `deinit` runs immediately. Use `[weak self]` in escaping closures to prevent retain cycles.";
+    case 10:
+      return "Shipping Hint: Modularize your codebase into local Swift Packages (SPM) to isolate features and speed up Xcode incremental compilation.";
+    default:
+      return "Pro-Tip: Keep your functions focused, test your boundary conditions, and verify code behavior directly in Xcode Previews.";
+  }
+}
+
+function getDefaultDosDontsForStep(weekNum, dayNum, step) {
+  const key = `${weekNum}_${dayNum}`;
+  if (TOPIC_DOS_DONTS[key]) return TOPIC_DOS_DONTS[key];
+  switch (weekNum) {
+    case 4:
+      return {
+        dos: [
+          "Use `@State` strictly for view-local value types; use `@Observable` for shared state and ViewModels.",
+          "Pass `$` projected bindings to child controls that need two-way data editing.",
+          "Keep ViewModel properties simple and mutate state on the main thread."
+        ],
+        donts: [
+          "Don't use `@State` for complex reference models across multiple views.",
+          "Don't mutate state during SwiftUI body evaluation.",
+          "Don't use legacy `@Published` properties in modern iOS 17+ projects."
+        ]
+      };
+    case 5:
+      return {
+        dos: [
+          "Annotate UI-bound ViewModels with `@MainActor` to guarantee thread safety.",
+          "Use `async let` for parallel independent requests.",
+          "Conform data models crossing actor boundaries to `Sendable`."
+        ],
+        donts: [
+          "Don't use legacy `DispatchQueue.global().async` in modern Swift 6.",
+          "Don't leave unbounded background tasks running after a screen is closed.",
+          "Don't use `nonisolated(unsafe)` to silence compiler concurrency warnings without locks."
+        ]
+      };
+    case 6:
+      return {
+        dos: [
+          "Use `navigationDestination(for: Type.self)` for type-safe screen routing.",
+          "Conform list item models to `Identifiable` for clean `List` rendering.",
+          "Use `.sheet(item: $selected)` to guarantee safe unwrapping in modals."
+        ],
+        donts: [
+          "Don't use deprecated `NavigationView` or legacy `NavigationLink`.",
+          "Don't nest multiple `NavigationStack`s inside child views.",
+          "Don't hardcode raw string paths for screen navigation."
+        ]
+      };
+    case 7:
+      return {
+        dos: [
+          "Use `URLSession.shared.data(from: url)` with `async/await`.",
+          "Validate HTTP status codes with `(200...299).contains(httpResponse.statusCode)`.",
+          "Use protocol initializer injection for testable API clients without Hilt."
+        ],
+        donts: [
+          "Don't swallow network errors or return empty lists silently.",
+          "Don't manually parse dictionaries with `[String: Any]`.",
+          "Don't hit live endpoints in automated unit tests."
+        ]
+      };
+    case 8:
+      return {
+        dos: [
+          "Decorate database entity classes with `@Model`.",
+          "Use `@Query` for reactive, auto-updating SwiftUI list queries.",
+          "Store authentication tokens and keys in the iOS Keychain."
+        ],
+        donts: [
+          "Don't store sensitive secrets or auth tokens in `UserDefaults`.",
+          "Don't mutate SwiftData entities outside of an active `ModelContext`.",
+          "Don't load entire tables into memory just to filter them with array methods."
+        ]
+      };
+    case 9:
+      return {
+        dos: [
+          "Capture `[weak self]` in escaping async closures and notification listeners.",
+          "Use modern Swift Testing with `@Test` and `#expect`.",
+          "Inspect allocations with Xcode's Memory Graph Debugger before releases."
+        ],
+        donts: [
+          "Don't create strong reference cycles between parent and child objects.",
+          "Don't blindly add `[weak self]` to non-escaping closures like `.map` or `.filter`.",
+          "Don't rely on background garbage collection to clean up memory leaks."
+        ]
+      };
+    case 10:
+      return {
+        dos: [
+          "Use `.xcconfig` files to configure environment variables and bundle IDs cleanly.",
+          "Enable 'Automatically manage signing' in Xcode.",
+          "Distribute builds to TestFlight for internal and external QA testing."
+        ],
+        donts: [
+          "Don't commit private signing certificates or API keys to git.",
+          "Don't submit to App Store review without testing on real physical hardware.",
+          "Don't ignore App Store Review Guidelines regarding privacy manifests."
+        ]
+      };
+    default:
+      return {
+        dos: [
+          "Follow Apple Human Interface Guidelines for native iOS feel.",
+          "Write clean, modular code with small single-purpose types.",
+          "Test edge cases and handle errors explicitly."
+        ],
+        donts: [
+          "Don't copy-paste Android design patterns directly onto iOS.",
+          "Don't ignore compiler warnings or static analyzer suggestions.",
+          "Don't block the main thread with synchronous operations."
+        ]
+      };
+  }
+}
+
+function getStepTutorialContent(weekNum, step) {
+  let descriptionHtml = "";
+  if (step.description) {
+    if (Array.isArray(step.description)) {
+      descriptionHtml = step.description.map(p => `<p>${formatInlineCode(p)}</p>`).join("");
+    } else {
+      descriptionHtml = `<p>${formatInlineCode(step.description)}</p>`;
+    }
+    if (step.details && step.details.length > 0) {
+      descriptionHtml += `<div class="tutorial-subheading">Key Technical Details:</div><ul class="concept-details-list" style="margin-top:0.4rem;">` +
+        step.details.map(d => `<li>${formatInlineCode(d)}</li>`).join("") +
+        `</ul>`;
+    }
+  } else if (step.details && step.details.length > 0) {
+    descriptionHtml = step.details.map(d => `<p>${formatInlineCode(d)}</p>`).join("");
+  } else {
+    descriptionHtml = `<p><strong>Core Architectural Shift:</strong> ${formatInlineCode(step.shift)}</p><p>Understanding this concept under the hood ensures you write idiomatic Swift without carrying over Android memory or architectural anti-patterns.</p>`;
+  }
+
+  const hintText = step.hint || getDefaultHintForStep(weekNum, step.day, step);
+
+  let dos = (step.dos && step.dos.length > 0) ? step.dos : null;
+  let donts = (step.donts && step.donts.length > 0) ? step.donts : null;
+
+  if (!dos || !donts) {
+    const defaults = getDefaultDosDontsForStep(weekNum, step.day, step);
+    if (!dos) dos = defaults.dos;
+    if (!donts) donts = defaults.donts;
+  }
+
+  return { descriptionHtml, hintText, dos, donts };
+}
+
 function saveCompletedWeeks() {
   localStorage.setItem("ios_completed_weeks", JSON.stringify(completedWeeks));
   updateProgressUI();
@@ -1072,6 +1505,7 @@ function renderMainContent() {
         const answeredOption = checkpointAnswers[stepKey];
         const hasAnsweredCheckpoint = answeredOption !== undefined;
         const activeTab = activeCodeTabs[stepKey] || "kotlin";
+        const tutorial = getStepTutorialContent(weekObj.week, step);
 
         return `
           <div class="daily-step-card">
@@ -1097,11 +1531,15 @@ function renderMainContent() {
               <div class="callout-body">${formatInlineCode(step.shift)}</div>
             </div>
 
-            ${step.details && step.details.length ? `
-              <ul class="concept-details-list">
-                ${step.details.map(d => `<li>${formatInlineCode(d)}</li>`).join("")}
-              </ul>
-            ` : ""}
+            <!-- In-Depth Concept Breakdown Card -->
+            <div class="tutorial-concept-card">
+              <div class="tutorial-concept-header">
+                <span>📖 Deep-Dive: Mechanics & Under-the-Hood</span>
+              </div>
+              <div class="tutorial-prose">
+                ${tutorial.descriptionHtml}
+              </div>
+            </div>
 
             <!-- macOS Code Window -->
             <div class="mac-code-window">
@@ -1154,6 +1592,28 @@ function renderMainContent() {
                   <pre class="code-block"><code>${highlightCode(activeTab === "kotlin" ? step.kotlinCode : step.swiftCode)}</code></pre>
                 </div>
               `}
+            </div>
+
+            <!-- Senior Engineer Pro-Tip & Xcode Hint -->
+            <div class="callout-card callout-hint">
+              <div class="callout-header">💡 Senior Engineer Pro-Tip & Xcode Hint</div>
+              <div class="callout-body">${formatInlineCode(tutorial.hintText)}</div>
+            </div>
+
+            <!-- Best Practices: Do's and Don'ts Matrix -->
+            <div class="dos-donts-grid">
+              <div class="dos-card">
+                <div class="dos-header">✅ DO (Idiomatic Swift 6 / SwiftUI)</div>
+                <ul class="dos-list">
+                  ${tutorial.dos.map(d => `<li>${formatInlineCode(d)}</li>`).join("")}
+                </ul>
+              </div>
+              <div class="donts-card">
+                <div class="donts-header">❌ DON'T (Android Anti-Patterns to Avoid)</div>
+                <ul class="donts-list">
+                  ${tutorial.donts.map(d => `<li>${formatInlineCode(d)}</li>`).join("")}
+                </ul>
+              </div>
             </div>
 
             <!-- Inline Checkpoint (Quick Comprehension Check) -->
